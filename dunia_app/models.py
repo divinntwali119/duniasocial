@@ -645,8 +645,8 @@ class Article(models.Model):
                 self.image = nouveau
             super().save(*args, **kwargs)
 
-        def __str__(self):
-            return self.titre
+    def __str__(self):
+        return self.titre
 
 
 
