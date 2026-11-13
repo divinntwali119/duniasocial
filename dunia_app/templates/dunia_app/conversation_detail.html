@@ -1,0 +1,26 @@
+{% extends 'dunia_app/base.html' %}
+
+{% block title %}Conversation avec {{ interlocuteur.get_full_name|default:interlocuteur.username }} · Dunia{% endblock %}
+
+{% block content %}
+<main class="mx-auto flex min-h-[calc(100dvh-8rem)] max-w-3xl flex-col px-3 py-4 pb-28 sm:px-5 sm:py-7">
+  <a class="link link-primary mb-3 min-h-10 content-center text-sm" href="{% url 'messagerie' %}">← Tous les messages</a>
+  <section class="flex flex-1 flex-col overflow-hidden rounded-2xl border border-base-300 bg-base-100">
+    <header class="flex items-center gap-3 border-b border-base-200 p-3 sm:p-4">
+      <a href="{% url 'profil_public' interlocuteur.username %}" class="flex min-w-0 items-center gap-3">
+        {% if interlocuteur.profil_dunia.photo %}<img class="h-11 w-11 rounded-full object-cover" src="{{ interlocuteur.profil_dunia.photo.url }}" alt="">{% else %}{% include 'dunia_app/partials/avatar_fallback.html' with avatar_classes='h-11 w-11 rounded-full border border-base-200' %}{% endif %}
+        <span class="min-w-0"><span class="block truncate font-semibold">{{ interlocuteur.get_full_name|default:interlocuteur.username }}</span><span class="text-xs text-base-content/55">Membre Dunia</span></span>
+      </a>
+    </header>
+    <div class="flex-1 space-y-4 overflow-y-auto bg-base-200/30 p-4 sm:p-6">
+      {% for message in messages_conversation %}
+      <div class="chat {% if message.sender_id == request.user.id %}chat-end{% else %}chat-start{% endif %}">
+        <div class="chat-header mb-1 text-xs text-base-content/55">{{ message.created_at|date:'d/m H:i' }}</div>
+        <div class="chat-bubble max-w-[88%] whitespace-pre-wrap {% if message.sender_id == request.user.id %}bg-primary text-primary-content{% else %}bg-base-200 text-base-content{% endif %}">{{ message.content }}</div>
+      </div>
+      {% empty %}<p class="py-10 text-center text-sm text-base-content/60">Envoyez le premier message pour commencer.</p>{% endfor %}
+    </div>
+    <form method="post" class="border-t border-base-200 p-3 sm:p-4" data-loading-form>{% csrf_token %}<label class="form-control"><span class="sr-only">Votre message</span>{{ form.content }}{% for error in form.content.errors %}<span class="text-sm text-error">{{ error }}</span>{% endfor %}</label><div class="mt-2 flex justify-end"><button class="btn btn-primary min-h-11 rounded-xl" type="submit"><span data-button-label>Envoyer</span><span class="loading loading-spinner loading-sm hidden" data-loading-spinner aria-hidden="true"></span></button></div></form>
+  </section>
+</main>
+{% endblock %}

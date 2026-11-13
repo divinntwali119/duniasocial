@@ -1,0 +1,93 @@
+{% extends 'dunia_app/base.html' %}
+{% load static %}
+
+{% block title %}Messagerie · Dunia{% endblock %}
+
+{% block content %}
+<main class="mx-auto flex min-h-[calc(100dvh-7rem)] max-w-6xl flex-col gap-4 px-3 py-5 sm:px-5 sm:py-7 lg:min-h-[calc(100dvh-4rem)]">
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <p class="text-sm font-semibold text-primary">Communauté Dunia</p>
+      <h1 class="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">Messagerie</h1>
+      <p class="mt-1 text-sm text-base-content/65">Échangez et gardez le lien avec les membres.</p>
+    </div>
+    {% if not is_guest %}
+    <a class="btn btn-primary btn-sm min-h-10 rounded-xl" href="{% url 'annuaire_apprenants' %}">
+      <svg aria-hidden="true" viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-4-4M11 8v6m-3-3h6"/></svg>
+      Nouveau message
+    </a>
+    {% endif %}
+  </header>
+
+  {% if is_guest %}
+  <div class="grid flex-1 gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,.8fr)]">
+    <section class="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-base-300 bg-base-100 p-6 text-center" aria-label="Accès à la messagerie">
+      <span class="grid h-12 w-12 place-items-center rounded-full bg-primary/10 text-primary" aria-hidden="true"><svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/></svg></span>
+      <h2 class="mt-3 font-semibold">Discussions privées</h2>
+      <p class="mt-1 max-w-sm text-sm text-base-content/65">Connectez-vous pour retrouver vos conversations et échanger avec les membres.</p>
+      <a class="btn btn-primary btn-sm mt-4 rounded-xl" href="{% url 'connexion' %}?next={% url 'messagerie' %}">Se connecter</a>
+    </section>
+    <section class="flex flex-col justify-center rounded-2xl border border-primary/15 bg-primary/5 p-6 sm:p-8">
+      <span class="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary" aria-hidden="true"><svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/></svg></span>
+      <h2 class="mt-4 text-xl font-bold">Vos échanges, au même endroit</h2>
+      <p class="mt-2 text-sm leading-6 text-base-content/70">Connectez-vous pour retrouver vos conversations et écrire en privé aux membres de la communauté Dunia.</p>
+      <a class="btn btn-primary mt-5 min-h-11 w-full rounded-xl sm:w-fit" href="{% url 'connexion' %}?next={% url 'messagerie' %}">Se connecter</a>
+      <p class="mt-3 text-sm text-base-content/60">Pas encore de compte ? <a class="font-semibold text-primary hover:underline" href="{% url 'inscription' %}">Rejoindre Dunia</a></p>
+    </section>
+  </div>
+  {% else %}
+  <div class="grid flex-1 gap-4 lg:min-h-0 lg:grid-cols-[minmax(0,1.45fr)_minmax(17rem,.75fr)]">
+    <section class="flex min-h-112 flex-col overflow-hidden rounded-2xl border border-base-300 bg-base-100 lg:min-h-0" aria-label="Vos conversations">
+      <div class="border-b border-base-200 p-3 sm:p-4">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="font-semibold">Discussions <span class="text-sm font-normal text-base-content/50">{{ conversations|length }}</span></h2>
+          <a class="text-sm font-semibold text-primary hover:underline" href="{% url 'annuaire_apprenants' %}">Trouver un membre</a>
+        </div>
+        <label class="relative mt-3 block">
+          <span class="sr-only">Rechercher une conversation</span>
+          <svg aria-hidden="true" viewBox="0 0 24 24" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/45" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-4-4"/></svg>
+          <input type="search" class="input input-bordered h-10 min-h-10 w-full rounded-xl pl-9 text-sm" placeholder="Rechercher dans vos discussions" data-conversation-search>
+        </label>
+        <div class="mt-3 flex gap-2" role="group" aria-label="Filtrer les discussions">
+          <button type="button" class="btn btn-primary btn-xs min-h-7 rounded-full px-3" aria-pressed="true" data-conversation-filter="all">Toutes</button>
+          <button type="button" class="btn btn-ghost btn-xs min-h-7 rounded-full px-3" aria-pressed="false" data-conversation-filter="unread">Non lues</button>
+        </div>
+      </div>
+
+      <div class="flex-1 divide-y divide-base-200 overflow-y-auto" data-messaging-content>
+        {% for conversation in conversations %}
+        <a class="group flex min-h-19 items-center gap-3 px-3 py-3 transition-colors hover:bg-base-200/50 sm:px-4" href="{% url 'conversation_detail' conversation.pk %}" data-conversation-link data-unread="{% if conversation.unread_count %}true{% else %}false{% endif %}" data-search="{{ conversation.interlocuteur.get_full_name|default:conversation.interlocuteur.username|lower }} {{ conversation.latest_message.content|default:''|lower }}">
+          <span class="relative shrink-0">
+            {% if conversation.interlocuteur.profil_dunia.photo %}<img class="h-11 w-11 rounded-full border border-base-200 object-cover" src="{{ conversation.interlocuteur.profil_dunia.photo.url }}" alt="" loading="lazy">{% else %}{% include 'dunia_app/partials/avatar_fallback.html' with avatar_classes='h-11 w-11 rounded-full border border-base-200' %}{% endif %}
+            {% if conversation.unread_count %}<span class="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-base-100 bg-primary" aria-label="Message non lu"></span>{% endif %}
+          </span>
+          <span class="min-w-0 flex-1">
+            <span class="flex items-center justify-between gap-2"><span class="truncate text-sm {% if conversation.unread_count %}font-bold text-base-content{% else %}font-semibold{% endif %}">{{ conversation.interlocuteur.get_full_name|default:conversation.interlocuteur.username }}</span><time class="shrink-0 text-[11px] text-base-content/50" datetime="{{ conversation.updated_at|date:'c' }}">{{ conversation.updated_at|date:'d/m H:i' }}</time></span>
+            <span class="mt-1 block truncate text-xs {% if conversation.unread_count %}font-medium text-base-content/75{% else %}text-base-content/55{% endif %}">{% if conversation.latest_message.sender_id == request.user.id %}Vous : {% endif %}{{ conversation.latest_message.content|default:'Démarrer la conversation'|truncatechars:90 }}</span>
+          </span>
+          {% if conversation.unread_count %}<span class="badge badge-primary badge-sm">{{ conversation.unread_count }}</span>{% endif %}
+          <svg aria-hidden="true" viewBox="0 0 24 24" class="h-4 w-4 shrink-0 text-base-content/30 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" fill="currentColor"><path d="m9 5 7 7-7 7-1.4-1.4 5.6-5.6-5.6-5.6L9 5Z"/></svg>
+        </a>
+        {% empty %}
+        <div class="flex flex-1 flex-col items-center justify-center px-6 py-12 text-center" data-conversation-empty>
+          <span class="grid h-14 w-14 place-items-center rounded-full bg-primary/10 text-primary" aria-hidden="true"><svg viewBox="0 0 24 24" class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/></svg></span>
+          <h3 class="mt-4 font-semibold">Aucune discussion pour le moment</h3>
+          <p class="mt-1 max-w-xs text-sm text-base-content/60">Visitez l’annuaire pour découvrir les membres et démarrer un échange.</p>
+          <a class="btn btn-primary btn-sm mt-4 rounded-xl" href="{% url 'annuaire_apprenants' %}">Découvrir les membres</a>
+        </div>
+        {% endfor %}
+        <p class="hidden p-6 text-center text-sm text-base-content/55" data-conversation-no-results>Aucune discussion ne correspond à votre recherche.</p>
+      </div>
+    </section>
+
+    <aside class="hidden flex-col justify-center rounded-2xl border border-primary/15 bg-primary/5 p-6 lg:flex">
+      <span class="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary" aria-hidden="true"><svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/></svg></span>
+      <h2 class="mt-4 text-xl font-bold">Un réseau, des échanges</h2>
+      <p class="mt-2 text-sm leading-6 text-base-content/70">Choisissez une discussion pour reprendre votre échange, ou trouvez un membre Dunia pour faire connaissance.</p>
+      <a class="btn btn-outline btn-primary mt-5 min-h-10 w-fit rounded-xl" href="{% url 'annuaire_apprenants' %}">Explorer l’annuaire</a>
+    </aside>
+  </div>
+  {% endif %}
+</main>
+<script src="{% static 'js/messaging.js' %}" defer></script>
+{% endblock %}

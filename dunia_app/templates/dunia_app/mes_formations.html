@@ -1,0 +1,25 @@
+{% extends 'dunia_app/base.html' %}
+
+{% block title %}Mes formations · Dunia{% endblock %}
+
+{% block content %}
+<main class="mx-auto max-w-6xl px-3 py-5 sm:px-5">
+  <header class="flex flex-wrap items-end justify-between gap-3 rounded-2xl bg-linear-to-br from-blue-950 via-primary to-cyan-600 p-4 text-primary-content shadow-sm sm:p-5">
+    <div><h1 class="text-2xl font-extrabold tracking-tight sm:text-3xl">Mes formations</h1><p class="mt-2 text-sm text-white/80">Reprenez votre progression ou retrouvez les cours terminés.</p></div>
+    <a class="btn btn-sm rounded-lg border-white/20 bg-white text-primary hover:bg-white/90" href="{% url 'cours_list' %}">Explorer les cours</a>
+  </header>
+  <div class="mt-3 grid gap-3 md:grid-cols-2">
+    {% for progression in progressions %}
+    <article class="flex gap-3 rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm sm:p-4">
+      <div class="grid h-12 w-12 shrink-0 place-items-center rounded-xl {% if progression.is_completed %}bg-success/10 text-success{% else %}bg-primary/10 text-primary{% endif %}" aria-hidden="true">{% if progression.cours.type_contenu == 'video' %}<svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3V9Z"/></svg>{% elif progression.cours.type_contenu == 'audio' %}<svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>{% else %}<svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg>{% endif %}</div>
+      <div class="min-w-0 flex-1"><div class="flex flex-wrap items-start justify-between gap-2"><div class="min-w-0"><p class="text-xs text-base-content/55">{{ progression.cours.get_type_contenu_display }}</p><h2 class="truncate text-base font-bold"><a class="hover:text-primary" href="{% url 'cours_detail' progression.cours.slug %}">{{ progression.cours.titre }}</a></h2></div><span class="badge badge-sm {% if progression.is_completed %}badge-success{% else %}badge-primary badge-outline{% endif %}">{% if progression.is_completed %}Terminé{% else %}En cours{% endif %}</span></div>
+        <p class="mt-1 text-xs text-base-content/60">Commencé le {{ progression.started_at|date:'d/m/Y' }}{% if progression.completed_at %} · terminé le {{ progression.completed_at|date:'d/m/Y' }}{% endif %}</p>
+        <div class="mt-2">{% if not progression.is_completed %}<a class="btn btn-primary btn-sm min-h-8 rounded-lg" href="{% url 'cours_detail' progression.cours.slug %}">Reprendre le cours</a> <form method="post" action="{% url 'cours_terminer' progression.cours.slug %}" class="inline">{% csrf_token %}<button class="btn btn-ghost btn-sm min-h-8 rounded-lg" type="submit">Marquer comme terminé</button></form>{% else %}<a class="btn btn-outline btn-sm min-h-8 rounded-lg" href="{% url 'cours_evaluer' progression.cours.slug %}">Évaluer ce cours</a>{% endif %}</div>
+      </div></div>
+    </article>
+    {% empty %}
+    <div class="rounded-xl border border-dashed border-base-300 bg-base-100 p-6 text-center md:col-span-2"><span class="mx-auto grid h-12 w-12 place-items-center rounded-full bg-primary/10 text-primary" aria-hidden="true"><svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18V5a2 2 0 0 1 2-2h3a4 4 0 0 1 4 4 4 4 0 0 1 4-4h3a2 2 0 0 1 2 2v13h-5a4 4 0 0 0-4 3 4 4 0 0 0-4-3H3Z"/></svg></span><h2 class="mt-3 text-lg font-bold">Votre parcours commence ici</h2><p class="mt-1 text-sm text-base-content/65">Ajoutez un cours à votre espace pour suivre vos apprentissages et retrouver votre progression.</p><a class="btn btn-primary btn-sm mt-3 rounded-lg" href="{% url 'cours_list' %}">Découvrir les cours</a></div>
+    {% endfor %}
+  </div>
+</main>
+{% endblock %}

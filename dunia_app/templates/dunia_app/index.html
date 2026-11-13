@@ -1,0 +1,179 @@
+{% extends 'dunia_app/base.html' %}
+{% load static %}
+
+{% block title %}Fil d’actualité · Dunia{% endblock %}
+
+{% block content %}
+<main class="min-h-screen bg-base-200/60 pb-8">
+  <div class="mx-auto grid max-w-[1600px] grid-cols-1 gap-0 px-0 py-0 sm:gap-4 sm:px-5 sm:py-5 lg:gap-6 xl:grid-cols-[minmax(13rem,16rem)_minmax(0,42rem)_minmax(16rem,19rem)] xl:justify-center">
+    <aside class="hidden space-y-4 xl:sticky xl:top-20 xl:block xl:self-start">
+      {% if request.user.is_authenticated %}
+      <a href="{% url 'profil_public' request.user.username %}" class="flex items-center gap-3 rounded-2xl px-3 py-2 transition-colors hover:bg-base-100">
+        {% if request.user.profil_dunia.photo %}<img src="{{ request.user.profil_dunia.photo.url }}" alt="" class="h-10 w-10 shrink-0 rounded-full border border-base-300 object-cover">{% else %}{% include 'dunia_app/partials/avatar_fallback.html' with avatar_classes='h-10 w-10' %}{% endif %}
+        <span class="min-w-0"><span class="block truncate font-semibold">{{ request.user.get_full_name|default:request.user.username }}</span><span class="block text-xs text-base-content/55">Voir mon profil</span></span>
+      </a>
+      {% endif %}
+      <nav class="space-y-1.5" aria-label="Navigation Dunia">
+        <a href="{% url 'amis' %}" class="flex min-h-11 items-center gap-3 rounded-lg px-3 font-medium transition-colors hover:bg-base-100 focus-visible:ring-2 focus-visible:ring-primary"><svg aria-hidden="true" viewBox="0 0 24 24" class="h-6 w-6 shrink-0 text-primary" fill="currentColor"><path d="M9 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.86 0-7 1.79-7 4v2h14v-2c0-2.21-3.14-4-7-4Zm9-2a3.5 3.5 0 1 0-2.43-6.02A5.96 5.96 0 0 1 17 8c0 1.49-.55 2.85-1.45 3.89.76.08 1.58.12 2.45.12Zm0 2c-.71 0-1.38.04-2 .12 1.24.9 2 2.1 2 3.88v2h4v-2c0-2.21-1.79-4-4-4Z"/></svg><span>Amis et invitations</span></a>
+        <a href="{% url 'messagerie' %}" class="flex min-h-11 items-center gap-3 rounded-lg px-3 font-medium transition-colors hover:bg-base-100 focus-visible:ring-2 focus-visible:ring-primary"><svg aria-hidden="true" viewBox="0 0 24 24" class="h-6 w-6 shrink-0 text-info" fill="currentColor"><path d="M20 3H4a2 2 0 0 0-2 2v14l4-3h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Zm-2 10H6v-2h12v2Zm0-4H6V7h12v2Z"/></svg><span>Messages</span></a>
+        <a href="{% url 'home_b' %}" class="flex min-h-11 items-center gap-3 rounded-lg px-3 font-medium transition-colors hover:bg-base-100 focus-visible:ring-2 focus-visible:ring-primary"><svg aria-hidden="true" viewBox="0 0 24 24" class="h-6 w-6 shrink-0 text-success" fill="currentColor"><path d="M19 2H7a5 5 0 0 0-5 5v12a3 3 0 0 0 3 3h15a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-1Zm-1 16H7a3 3 0 0 0-2 .76V7a2 2 0 0 1 2-2h11v13Zm-8-9h5v2h-5V9Zm0 4h7v2h-7v-2Z"/></svg><span>Formations</span></a>
+        <a href="{% url 'communautes' %}" class="flex min-h-11 items-center gap-3 rounded-lg px-3 font-medium transition-colors hover:bg-base-100 focus-visible:ring-2 focus-visible:ring-primary"><svg aria-hidden="true" viewBox="0 0 24 24" class="h-6 w-6 shrink-0 text-warning" fill="currentColor"><path d="M4 3h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2h-9l-6 4v-4H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm2 5v2h12V8H6Zm0 4v2h8v-2H6Z"/></svg><span>Communautés</span></a>
+        <a href="{% url 'article_list' %}" class="flex min-h-11 items-center gap-3 rounded-lg px-3 font-medium transition-colors hover:bg-base-100 focus-visible:ring-2 focus-visible:ring-primary"><svg aria-hidden="true" viewBox="0 0 24 24" class="h-6 w-6 shrink-0 text-secondary" fill="currentColor"><path d="M5 2h10l5 5v15H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm9 2v4h4l-4-4ZM7 12v2h10v-2H7Zm0 4v2h10v-2H7Z"/></svg><span>Articles et ressources</span></a>
+        <a href="{% url 'challenge_list' %}" class="flex min-h-11 items-center gap-3 rounded-lg px-3 font-medium transition-colors hover:bg-base-100 focus-visible:ring-2 focus-visible:ring-primary"><svg aria-hidden="true" viewBox="0 0 24 24" class="h-6 w-6 shrink-0 text-secondary" fill="currentColor"><path d="m12 2.5 2.93 5.94 6.56.95-4.75 4.63 1.12 6.54L12 17.47l-5.86 3.09 1.12-6.54L2.5 9.39l6.56-.95L12 2.5Z"/></svg><span>Défis Dunia</span></a>
+      </nav>
+      <p class="border-t border-base-300 px-3 pt-3 text-xs leading-5 text-base-content/50">Confidentialité · Conditions · Aide<br>© Dunia</p>
+    </aside>
+
+    <div class="relative mx-auto w-full max-w-2xl min-w-0 space-y-3 sm:space-y-4">
+    {% if request.user.is_authenticated %}
+    <details class="group rounded-none border-y border-x-0 border-base-300 bg-base-100 px-3 py-2 sm:rounded-2xl sm:border sm:px-4" data-post-composer>
+      <summary class="flex min-h-11 cursor-pointer list-none items-center gap-3 rounded-xl focus-visible:ring-2 focus-visible:ring-primary marker:content-none [&::-webkit-details-marker]:hidden" aria-label="Ouvrir le formulaire de publication">
+        {% if request.user.profil_dunia.photo %}<img src="{{ request.user.profil_dunia.photo.url }}" alt="" class="h-9 w-9 shrink-0 rounded-full border border-base-300 object-cover">{% else %}{% include 'dunia_app/partials/avatar_fallback.html' with avatar_classes='h-9 w-9' %}{% endif %}
+        <span class="flex min-h-9 flex-1 items-center rounded-full bg-base-200/70 px-4 text-sm text-base-content/60 transition-colors group-hover:bg-base-200">Partager quelque chose avec la communauté…</span>
+        <span class="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-success sm:text-sm"><svg aria-hidden="true" viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2ZM8.5 8a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm10.5 10H5l4.2-5.6 2.8 3.6 2-2.5 5 4.5Z"/></svg><span>Photo</span></span>
+      </summary>
+      <form method="post" action="{% url 'social_post_create' %}" enctype="multipart/form-data" class="space-y-3 border-t border-base-200 pt-3" data-social-post-form>
+        {% csrf_token %}
+        <label class="block">
+          <span class="sr-only">{{ post_form.contenu.label }}</span>
+          {{ post_form.contenu }}
+          {% for error in post_form.contenu.errors %}<span class="mt-1 block text-sm text-error">{{ error }}</span>{% endfor %}
+        </label>
+        <div class="hidden items-center gap-3 rounded-xl bg-base-200/60 p-2" data-image-preview>
+          <img src="" alt="Aperçu de la photo à publier" class="h-16 w-16 rounded-lg object-cover" data-image-preview-image>
+          <span class="min-w-0 flex-1 truncate text-sm font-medium" data-image-preview-name></span>
+          <button type="button" class="btn btn-ghost btn-sm btn-circle" aria-label="Retirer la photo" data-remove-image><svg aria-hidden="true" viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="m6 6 12 12M18 6 6 18"/></svg></button>
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <label class="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-lg px-2 text-sm font-medium text-base-content/70 transition-colors hover:bg-base-200">
+            <svg aria-hidden="true" viewBox="0 0 24 24" class="h-5 w-5 text-success" fill="currentColor"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2ZM8.5 8a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm10.5 10H5l4.2-5.6 2.8 3.6 2-2.5 5 4.5Z"/></svg>
+            <span>Ajouter une photo</span>
+            <input id="post-image-input" type="file" name="image" accept="image/*" class="sr-only" data-post-image-input>
+          </label>
+          <div class="min-w-0 flex-1 text-sm text-error" data-post-errors>{% for error in post_form.image.errors %}<span class="block">{{ error }}</span>{% endfor %}</div>
+          <button type="submit" class="btn btn-primary btn-sm min-h-9 rounded-lg px-4" data-loading-label="Publication…">
+            <span data-button-label>Publier</span><span class="loading loading-spinner loading-sm hidden" data-loading-spinner aria-hidden="true"></span>
+          </button>
+        </div>
+        <p class="sr-only" role="status" aria-live="polite" data-post-status></p>
+      </form>
+    </details>
+    <p class="sr-only" role="status" aria-live="polite" data-post-announcement></p>
+    {% else %}
+    <section class="flex items-center gap-3 rounded-none border-y border-x-0 border-base-300 bg-base-100 px-3 py-2.5 sm:rounded-xl sm:border" aria-label="Participer au fil">
+      <p class="min-w-0 flex-1 text-sm text-base-content/70">Participez à la conversation</p>
+      <a href="{% url 'connexion' %}" class="shrink-0 text-sm font-semibold text-primary hover:underline">Se connecter</a>
+    </section>
+    {% endif %}
+
+    <nav class="flex items-start justify-center gap-5 overflow-x-auto bg-base-100 px-1 py-2 sm:gap-8 sm:bg-transparent" aria-label="Accès rapides">
+      <a href="{% url 'challenge_list' %}" class="flex w-16 shrink-0 flex-col items-center gap-1.5 text-center" aria-label="Challenges">
+        <span class="indicator"><span class="indicator-item indicator-bottom badge badge-primary badge-xs"></span><span class="grid h-14 w-14 place-items-center rounded-full bg-primary text-white shadow-sm sm:h-16 sm:w-16"><svg aria-hidden="true" viewBox="0 0 24 24" class="h-6 w-6" fill="currentColor"><path d="m12 2.5 2.93 5.94 6.56.95-4.75 4.63 1.12 6.54L12 17.47l-5.86 3.09 1.12-6.54L2.5 9.39l6.56-.95L12 2.5Z"/></svg></span></span>
+        <span class="text-xs font-medium">Challenge</span>
+      </a>
+      <a href="{% url 'cours_list' %}" class="flex w-16 shrink-0 flex-col items-center gap-1.5 text-center" aria-label="Cours en ligne">
+        <span class="indicator"><span class="indicator-item indicator-bottom badge badge-primary badge-xs"></span><span class="grid h-14 w-14 place-items-center rounded-full bg-primary text-white shadow-sm sm:h-16 sm:w-16"><svg aria-hidden="true" viewBox="0 0 24 24" class="h-6 w-6" fill="currentColor"><path d="M4.5 3H11v17.2c-2.1-1.6-4.8-1.8-8-.6V4.5C3 3.67 3.67 3 4.5 3Zm15 0H13v17.2c2.1-1.6 4.8-1.8 8-.6V5c0-1.1-.9-2-2-2Z"/></svg></span></span>
+        <span class="text-xs font-medium">Cours</span>
+      </a>
+      <button type="button" disabled aria-disabled="true" title="Équipe — bientôt disponible" class="flex w-16 shrink-0 cursor-not-allowed flex-col items-center gap-1.5 text-center opacity-55" aria-label="Équipe pédagogique, bientôt disponible">
+        <span class="relative grid h-14 w-14 place-items-center rounded-full bg-base-300 text-base-content/70 sm:h-16 sm:w-16"><svg aria-hidden="true" viewBox="0 0 24 24" class="h-6 w-6" fill="currentColor"><path d="M9 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.86 0-7 1.79-7 4v2h14v-2c0-2.21-3.14-4-7-4Zm9-2a3.5 3.5 0 1 0-2.43-6.02A5.96 5.96 0 0 1 17 8c0 1.49-.55 2.85-1.45 3.89.76.08 1.58.12 2.45.12Zm0 2c-.71 0-1.38.04-2 .12 1.24.9 2 2.1 2 3.88v2h4v-2c0-2.21-1.79-4-4-4Z"/></svg><span class="absolute -right-0.5 -top-0.5 grid h-5 w-5 place-items-center rounded-full bg-base-100 text-base-content/60"><svg aria-hidden="true" viewBox="0 0 24 24" class="h-3 w-3" fill="currentColor"><path d="M17 8h-1V6a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2ZM10 6a2 2 0 1 1 4 0v2h-4V6Z"/></svg></span></span>
+        <span class="text-xs text-base-content/60">Équipe</span>
+      </button>
+      <button type="button" disabled aria-disabled="true" title="Certifications — bientôt disponibles" class="flex w-16 shrink-0 cursor-not-allowed flex-col items-center gap-1.5 text-center opacity-55" aria-label="Certifications, bientôt disponibles">
+        <span class="relative grid h-14 w-14 place-items-center rounded-full bg-base-300 text-base-content/70 sm:h-16 sm:w-16"><svg aria-hidden="true" viewBox="0 0 24 24" class="h-6 w-6" fill="currentColor"><path d="M5 3h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-4l-3 4-3-4H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm3 4v2h8V7H8Zm0 4v2h5v-2H8Z"/></svg><span class="absolute -right-0.5 -top-0.5 grid h-5 w-5 place-items-center rounded-full bg-base-100 text-base-content/60"><svg aria-hidden="true" viewBox="0 0 24 24" class="h-3 w-3" fill="currentColor"><path d="M17 8h-1V6a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2ZM10 6a2 2 0 1 1 4 0v2h-4V6Z"/></svg></span></span>
+        <span class="text-xs text-base-content/60">Certifs</span>
+      </button>
+    </nav>
+
+    {% if page_obj.number == 1 %}
+    <section class="space-y-0 sm:space-y-4" aria-label="Actualités Dunia">
+      {% for publication in actualites %}
+      {% include 'dunia_app/partials/feed_card.html' with item=publication item_type='publication' %}
+      {% empty %}
+      <div class="rounded-2xl border border-dashed border-base-300 bg-base-100 px-5 py-8 text-center">
+        <p class="font-medium">Aucune actualité pour le moment.</p>
+        <p class="mt-1 text-sm text-base-content/60">Les nouvelles de Dunia apparaîtront ici.</p>
+      </div>
+      {% endfor %}
+    </section>
+    {% endif %}
+
+    <section id="feed" aria-label="Publications de la communauté">
+      {% if search_term %}<p class="px-1 text-sm text-base-content/60">Résultats pour « {{ search_term }} »</p>{% endif %}
+      <div id="feed-list" class="space-y-0 sm:space-y-4" aria-live="polite" aria-busy="false">
+        {% include 'dunia_app/partials/feed_page.html' %}
+      </div>
+      <div class="flex flex-col items-center gap-2 py-5">
+        <p id="feed-status" class="min-h-5 text-center text-sm text-base-content/60" role="status" aria-live="polite"></p>
+        <button id="feed-load-more" type="button" class="btn btn-outline min-h-11 rounded-xl px-8" data-feed-load-more data-next-url="{% if page_obj.has_next %}?q={{ search_term|urlencode }}&amp;page={{ page_obj.next_page_number }}{% endif %}" {% if not page_obj.has_next %}hidden{% endif %}>
+          <span data-button-label>Afficher plus</span><span class="loading loading-spinner loading-sm hidden" data-loading-spinner aria-hidden="true"></span>
+        </button>
+        <button id="feed-refresh" type="button" class="btn btn-ghost min-h-11 rounded-xl px-8" data-feed-refresh {% if page_obj.has_next %}hidden{% endif %}>
+          <svg aria-hidden="true" viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7v5h-5M4 17v-5h5m-4.1-3a8 8 0 0 1 13.2-2L20 12M4 12l1.9 5a8 8 0 0 0 13.2-2"/></svg>
+          <span data-button-label>Actualiser le fil</span><span class="loading loading-spinner loading-sm hidden" data-loading-spinner aria-hidden="true"></span>
+        </button>
+      </div>
+    </section>
+
+  </div>
+
+  <aside class="hidden space-y-4 xl:sticky xl:top-20 xl:block xl:self-start">
+    {% if request.user.is_authenticated %}
+    <section class="rounded-2xl border border-base-300 bg-base-100 p-4">
+      <a href="{% url 'profil_public' request.user.username %}" class="flex items-center gap-3">
+        {% if request.user.profil_dunia.photo %}<img src="{{ request.user.profil_dunia.photo.url }}" alt="" class="h-12 w-12 rounded-full border border-base-300 object-cover">{% else %}{% include 'dunia_app/partials/avatar_fallback.html' with avatar_classes='h-12 w-12' %}{% endif %}
+        <span><span class="block font-semibold">{{ request.user.get_full_name|default:request.user.username }}</span><span class="text-sm text-base-content/60">Voir mon profil</span></span>
+      </a>
+      <div class="mt-4 grid grid-cols-2 gap-2 border-t border-base-200 pt-3">
+        <a href="{% url 'amis' %}" class="btn btn-ghost btn-sm rounded-lg">Mes amis</a>
+        <a href="{% url 'messagerie' %}" class="btn btn-ghost btn-sm rounded-lg">Messages</a>
+      </div>
+    </section>
+    {% endif %}
+
+    {% if formations %}
+    <section class="rounded-2xl border border-base-300 bg-base-100 p-4">
+      <div class="mb-3 flex items-center justify-between"><h2 class="font-semibold">Se former</h2><a href="{% url 'home_b' %}" class="link link-primary text-sm">Tout voir</a></div>
+      <div class="space-y-3">
+        {% for formation in formations %}
+        <a href="{% url 'info_detail' formation.slug %}" class="block rounded-xl border border-base-200 p-3 transition-colors hover:border-primary/40 hover:bg-base-200/60">
+          <span class="text-xs text-base-content/55">{{ formation.get_type_programme_display }}</span><span class="mt-1 block font-medium">{{ formation.titre }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if evenements %}
+    <section class="rounded-2xl border border-base-300 bg-base-100 p-4">
+      <div class="mb-3 flex items-center justify-between"><h2 class="font-semibold">À venir</h2><a href="{% url 'evenements_pro' %}" class="link link-primary text-sm">Calendrier</a></div>
+      <div class="space-y-3">
+        {% for evenement in evenements %}
+        <div class="border-l-2 border-primary pl-3"><p class="text-xs text-base-content/55">{{ evenement.date_debut|date:'d M · H:i' }}</p><p class="mt-1 font-medium">{{ evenement.titre }}</p><p class="text-sm text-base-content/60">{{ evenement.lieu|default:evenement.get_format_evenement_display }}</p></div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    <nav class="rounded-2xl border border-base-300 bg-base-100 p-4" aria-label="Explorer Dunia">
+      <h2 class="mb-3 font-semibold">Explorer</h2>
+      <div class="space-y-1 text-sm">
+        <a class="block rounded-lg px-3 py-2 hover:bg-base-200" href="{% url 'communautes' %}">Communautés</a>
+        <a class="block rounded-lg px-3 py-2 hover:bg-base-200" href="{% url 'galerie_projets' %}">Projets des membres</a>
+        <a class="block rounded-lg px-3 py-2 hover:bg-base-200" href="{% url 'offres_emploi' %}">Emplois et stages</a>
+        <a class="block rounded-lg px-3 py-2 hover:bg-base-200" href="{% url 'article_list' %}">Articles et ressources</a>
+      </div>
+    </nav>
+    <p class="px-2 text-xs text-base-content/50">Dunia · Apprendre, partager et progresser ensemble.</p>
+  </aside>
+  </div>
+</main>
+<template id="feed-skeleton-template">
+  <article class="space-y-3 rounded-xl border border-base-300 bg-base-100 p-3" aria-hidden="true">
+    <div class="flex items-center gap-2"><div class="skeleton h-10 w-10 rounded-full"></div><div class="flex-1 space-y-1.5"><div class="skeleton h-3 w-32"></div><div class="skeleton h-2.5 w-20"></div></div></div>
+    <div class="space-y-1.5"><div class="skeleton h-3 w-full"></div><div class="skeleton h-3 w-4/5"></div></div>
+    <div class="skeleton h-36 w-full rounded-lg"></div>
+    <div class="skeleton h-8 w-full rounded-md"></div>
+  </article>
+</template>
+{% endblock %}

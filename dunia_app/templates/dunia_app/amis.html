@@ -1,0 +1,131 @@
+{% extends 'dunia_app/base.html' %}
+
+{% block title %}Amis · Dunia{% endblock %}
+
+{% block content %}
+<main class="min-h-[calc(100dvh-7rem)] bg-[#f0f2f5] pb-24 lg:pb-8">
+  <div class="mx-auto grid max-w-[1600px] lg:min-h-[calc(100dvh-7rem)] lg:grid-cols-[11rem_minmax(0,1fr)]">
+    <aside class="hidden border-r border-base-300 bg-base-100 lg:block">
+      <div class="sticky top-28 p-3">
+        <a href="{% url 'home' %}" class="flex min-h-11 items-center gap-3 rounded-lg bg-base-200 px-3 text-sm font-medium"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary text-white" aria-hidden="true"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1V10Z"/></svg></span>Accueil</a>
+        <nav class="mt-2 space-y-1" aria-label="Navigation des amis">
+          <a href="#invitation-recue" class="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors hover:bg-base-200"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary" aria-hidden="true"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M16 19h5v-1a4 4 0 0 0-5.5-3.7M16 19H8m8 0v-1a4 4 0 0 0-8 0v1m8-11a4 4 0 1 1-8 0 4 4 0 0 1 8 0Zm1.5 2.5a3 3 0 1 0 0-6"/></svg></span>Invitations{% if demandes_recues %}<span class="ml-auto text-xs text-base-content/50">{{ demandes_recues|length }}</span>{% endif %}</a>
+          <a href="#suggestions" class="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors hover:bg-base-200"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary" aria-hidden="true"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3.5 14.2 9l5.8 2.2-5.8 2.1-2.2 5.7-2.1-5.7L4 11.2 9.9 9 12 3.5Z"/><path stroke-linecap="round" d="m19 15 .9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15Z"/></svg></span>Suggestions</a>
+          <a href="#tous-les-amis" class="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors hover:bg-base-200"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary" aria-hidden="true"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.5"/><path stroke-linecap="round" stroke-linejoin="round" d="M2 20a7 7 0 0 1 14 0m1-13a3.5 3.5 0 0 1 0 7m1 2a5.5 5.5 0 0 1 4 5"/></svg></span>Tous les amis</a>
+        </nav>
+        <div class="my-3 border-t border-base-300"></div>
+        <a href="{% url 'profil_modifier' %}" class="flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm text-base-content/65 transition-colors hover:bg-base-200 hover:text-base-content"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-base-200 text-base-content/70" aria-hidden="true"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.5"/><path stroke-linecap="round" stroke-linejoin="round" d="m19.4 15 .1.1a1.8 1.8 0 1 1-2.5 2.5l-.1-.1a1.8 1.8 0 0 0-3 .9v.2a1.8 1.8 0 1 1-3.6 0v-.2a1.8 1.8 0 0 0-3-.9l-.1.1a1.8 1.8 0 1 1-2.5-2.5l.1-.1a1.8 1.8 0 0 0-.9-3H3.7a1.8 1.8 0 1 1 0-3.6h.2a1.8 1.8 0 0 0 .9-3l-.1-.1a1.8 1.8 0 1 1 2.5-2.5l.1.1a1.8 1.8 0 0 0 3-.9v-.2a1.8 1.8 0 1 1 3.6 0v.2a1.8 1.8 0 0 0 3 .9l.1-.1a1.8 1.8 0 1 1 2.5 2.5l-.1.1a1.8 1.8 0 0 0 .9 3h.2a1.8 1.8 0 1 1 0 3.6h-.2a1.8 1.8 0 0 0-.9 3Z"/></svg></span>Paramètres</a>
+      </div>
+    </aside>
+
+    <div class="min-w-0 px-3 py-4 sm:px-5 lg:px-7 lg:py-6" data-friends-content>
+      <header class="mb-4 flex items-center justify-between border-b border-base-300 pb-4">
+        <div><h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Ami(e)s</h1></div>
+        <a href="{% url 'profil_modifier' %}" aria-label="Paramètres des amis" title="Paramètres" class="grid h-10 w-10 place-items-center rounded-full bg-base-200 text-base-content/70 transition-colors hover:bg-base-300"><svg aria-hidden="true" viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.5"/><path stroke-linecap="round" stroke-linejoin="round" d="m19.4 15 .1.1a1.8 1.8 0 1 1-2.5 2.5l-.1-.1a1.8 1.8 0 0 0-3 .9v.2a1.8 1.8 0 1 1-3.6 0v-.2a1.8 1.8 0 0 0-3-.9l-.1.1a1.8 1.8 0 1 1-2.5-2.5l.1-.1a1.8 1.8 0 0 0-.9-3H3.7a1.8 1.8 0 1 1 0-3.6h.2a1.8 1.8 0 0 0 .9-3l-.1-.1a1.8 1.8 0 1 1 2.5-2.5l.1.1a1.8 1.8 0 0 0 3-.9v-.2a1.8 1.8 0 1 1 3.6 0v.2a1.8 1.8 0 0 0 3 .9l.1-.1a1.8 1.8 0 1 1 2.5 2.5l-.1.1a1.8 1.8 0 0 0 .9 3h.2a1.8 1.8 0 1 1 0 3.6h-.2a1.8 1.8 0 0 0-.9 3Z"/></svg></a>
+      </header>
+
+      <nav class="mb-5 flex gap-2 overflow-x-auto pb-1 lg:hidden" aria-label="Sections des amis">
+        <a href="#invitation-recue" class="btn btn-sm min-h-9 shrink-0 rounded-full bg-base-100">Invitations{% if demandes_recues %} · {{ demandes_recues|length }}{% endif %}</a>
+        <a href="#suggestions" class="btn btn-sm min-h-9 shrink-0 rounded-full bg-base-100">Suggestions</a>
+        <a href="#tous-les-amis" class="btn btn-sm min-h-9 shrink-0 rounded-full bg-base-100">Tous les amis</a>
+      </nav>
+
+      {% if is_guest %}
+      <section class="mb-6 flex flex-col gap-3 rounded-xl border border-primary/15 bg-base-100 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5" aria-label="Connectez-vous pour accéder à vos amis">
+        <div><h2 class="font-bold">Retrouvez votre communauté Dunia</h2><p class="mt-1 text-sm text-base-content/65">Connectez-vous pour voir vos invitations, vos amis et les suggestions de membres.</p></div>
+        <div class="flex shrink-0 flex-col gap-2 sm:flex-row"><a class="btn btn-primary btn-sm min-h-10 rounded-lg" href="{% url 'connexion' %}?next={% url 'amis' %}">Se connecter</a><a class="btn btn-ghost btn-sm min-h-10 rounded-lg" href="{% url 'inscription' %}">Créer un compte</a></div>
+      </section>
+      {% endif %}
+
+      <section id="invitation-recue" class="mb-7 scroll-mt-28" aria-labelledby="invitations-titre">
+        <div class="mb-3 flex items-center justify-between"><div class="flex items-center gap-2"><h2 id="invitations-titre" class="text-lg font-bold">Invitations</h2><span class="text-sm text-base-content/55">{{ demandes_recues|length }}</span></div><a href="#invitation-envoyee" class="text-sm font-medium text-primary hover:underline">Voir les envoyées</a></div>
+        {% if is_guest %}
+        <p class="rounded-lg border border-base-300 bg-base-100 px-4 py-5 text-sm text-base-content/60">Connectez-vous pour consulter vos invitations reçues.</p>
+        {% else %}
+        {% if demandes_recues %}
+        <div class="flex snap-x gap-2 overflow-x-auto pb-3">
+          {% for relation in demandes_recues %}
+          <article class="w-36 shrink-0 snap-start overflow-hidden rounded-lg border border-base-300 bg-base-100 shadow-sm sm:w-40">
+            <a href="{% url 'profil_public' relation.autre.username %}" class="block">
+              {% if relation.autre.profil_dunia.photo %}<img src="{{ relation.autre.profil_dunia.photo.url }}" alt="Photo de {{ relation.autre.get_full_name|default:relation.autre.username }}" class="h-28 w-full object-cover" loading="lazy">{% else %}{% include 'dunia_app/partials/avatar_fallback.html' with avatar_classes='h-28 w-full rounded-none bg-base-200' %}{% endif %}
+              <span class="block truncate px-2 pt-2 text-sm font-semibold">{{ relation.autre.get_full_name|default:relation.autre.username }}</span>
+            </a>
+            <p class="truncate px-2 pt-0.5 text-[11px] text-base-content/55">Membre de la communauté</p>
+            <div class="space-y-1.5 p-2">
+              <form method="post" action="{% url 'demande_ami_action' relation.pk 'accepter' %}" data-loading-form>{% csrf_token %}<button class="btn btn-primary btn-xs min-h-8 w-full rounded-md" type="submit"><span data-button-label>Confirmer</span><span class="loading loading-spinner loading-xs hidden" data-loading-spinner aria-hidden="true"></span></button></form>
+              <form method="post" action="{% url 'demande_ami_action' relation.pk 'refuser' %}" data-loading-form>{% csrf_token %}<button class="btn btn-ghost btn-xs min-h-8 w-full rounded-md bg-base-200" type="submit"><span data-button-label>Supprimer</span><span class="loading loading-spinner loading-xs hidden" data-loading-spinner aria-hidden="true"></span></button></form>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}<p class="rounded-lg border border-base-300 bg-base-100 px-4 py-5 text-sm text-base-content/60">Vous n’avez pas de nouvelle invitation.</p>{% endif %}
+        {% endif %}
+      </section>
+
+      {% if demandes_envoyees %}
+      <section id="invitation-envoyee" class="mb-7 scroll-mt-28" aria-labelledby="envoyees-titre">
+        <h2 id="envoyees-titre" class="mb-3 text-lg font-bold">Invitations envoyées</h2>
+        <div class="flex gap-2 overflow-x-auto pb-3">
+          {% for relation in demandes_envoyees %}
+          <article class="flex w-64 shrink-0 items-center gap-3 rounded-lg border border-base-300 bg-base-100 p-3">
+            <a href="{% url 'profil_public' relation.autre.username %}" class="flex min-w-0 flex-1 items-center gap-2">
+              {% if relation.autre.profil_dunia.photo %}<img src="{{ relation.autre.profil_dunia.photo.url }}" alt="" class="h-10 w-10 rounded-full object-cover" loading="lazy">{% else %}{% include 'dunia_app/partials/avatar_fallback.html' with avatar_classes='h-10 w-10 border border-base-200' %}{% endif %}
+              <span class="truncate text-sm font-medium">{{ relation.autre.get_full_name|default:relation.autre.username }}</span>
+            </a>
+            <form method="post" action="{% url 'demande_ami_action' relation.pk 'annuler' %}" data-loading-form>{% csrf_token %}<button class="btn btn-ghost btn-xs rounded-md" type="submit"><span data-button-label>Annuler</span><span class="loading loading-spinner loading-xs hidden" data-loading-spinner aria-hidden="true"></span></button></form>
+          </article>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      <section id="suggestions" class="mb-7 scroll-mt-28" aria-labelledby="suggestions-titre">
+        <div class="mb-3 flex items-center justify-between"><h2 id="suggestions-titre" class="text-lg font-bold">Vous connaissez peut-être</h2><a href="{% url 'annuaire_apprenants' %}" class="text-sm font-medium text-primary hover:underline">Voir tout</a></div>
+        {% if is_guest %}
+        <p class="rounded-lg border border-base-300 bg-base-100 px-4 py-5 text-sm text-base-content/60">Connectez-vous pour découvrir des membres et leur envoyer une invitation.</p>
+        {% else %}
+        {% if suggestions %}
+        <div class="flex snap-x gap-2 overflow-x-auto pb-3">
+          {% for profil in suggestions %}
+          <article class="w-36 shrink-0 snap-start overflow-hidden rounded-lg border border-base-300 bg-base-100 shadow-sm sm:w-40">
+            <a href="{% url 'profil_public' profil.user.username %}" class="block">
+              {% if profil.photo %}<img src="{{ profil.photo.url }}" alt="Photo de {{ profil.user.get_full_name|default:profil.user.username }}" class="h-28 w-full object-cover" loading="lazy">{% else %}{% include 'dunia_app/partials/avatar_fallback.html' with avatar_classes='h-28 w-full rounded-none bg-base-200' %}{% endif %}
+              <span class="block truncate px-2 pt-2 text-sm font-semibold">{{ profil.user.get_full_name|default:profil.user.username }}</span>
+            </a>
+            <p class="truncate px-2 pt-0.5 text-[11px] text-base-content/55">{{ profil.ville|default:'Membre Dunia' }}</p>
+            <div class="space-y-1.5 p-2">
+              <form method="post" action="{% url 'demande_ami' profil.user.pk %}" data-loading-form>{% csrf_token %}<button class="btn btn-primary btn-xs min-h-8 w-full rounded-md" type="submit"><span data-button-label>Ajouter ami(e)</span><span class="loading loading-spinner loading-xs hidden" data-loading-spinner aria-hidden="true"></span></button></form>
+              <a class="btn btn-ghost btn-xs min-h-8 w-full rounded-md bg-base-200" href="{% url 'profil_public' profil.user.username %}">Voir le profil</a>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}<p class="rounded-lg border border-base-300 bg-base-100 px-4 py-5 text-sm text-base-content/60">Aucun membre à suggérer pour le moment.</p>{% endif %}
+        {% endif %}
+      </section>
+
+      <section id="tous-les-amis" class="scroll-mt-28" aria-labelledby="amis-titre">
+        <div class="mb-3 flex items-center justify-between"><h2 id="amis-titre" class="text-lg font-bold">Tous(tes) les ami(e)s</h2><span class="text-sm text-base-content/55">{{ amis|length }}</span></div>
+        {% if is_guest %}
+        <p class="rounded-lg border border-base-300 bg-base-100 px-4 py-5 text-sm text-base-content/60">Votre liste d’amis s’affichera ici après connexion.</p>
+        {% else %}
+        {% if amis %}
+        <div class="flex snap-x gap-2 overflow-x-auto pb-3">
+          {% for ami in amis %}
+          <article class="w-36 shrink-0 snap-start overflow-hidden rounded-lg border border-base-300 bg-base-100 shadow-sm sm:w-40">
+            <a href="{% url 'profil_public' ami.username %}" class="block">
+              {% if ami.profil_dunia.photo %}<img src="{{ ami.profil_dunia.photo.url }}" alt="Photo de {{ ami.get_full_name|default:ami.username }}" class="h-28 w-full object-cover" loading="lazy">{% else %}{% include 'dunia_app/partials/avatar_fallback.html' with avatar_classes='h-28 w-full rounded-none bg-base-200' %}{% endif %}
+              <span class="block truncate px-2 pt-2 text-sm font-semibold">{{ ami.get_full_name|default:ami.username }}</span>
+            </a>
+            <p class="truncate px-2 pt-0.5 text-[11px] text-base-content/55">Membre Dunia</p>
+            <div class="space-y-1.5 p-2"><a class="btn btn-primary btn-xs min-h-8 w-full rounded-md" href="{% url 'conversation_demarrer' ami.username %}">Message</a><a class="btn btn-ghost btn-xs min-h-8 w-full rounded-md bg-base-200" href="{% url 'profil_public' ami.username %}">Profil</a></div>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}<p class="rounded-lg border border-base-300 bg-base-100 px-4 py-5 text-sm text-base-content/60">Votre liste d’amis apparaîtra ici après vos premières confirmations.</p>{% endif %}
+        {% endif %}
+      </section>
+    </div>
+  </div>
+</main>
+{% endblock %}

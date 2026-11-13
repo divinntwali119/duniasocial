@@ -1,0 +1,53 @@
+{% extends 'dunia_app/base.html' %}
+{% load static %}
+
+{% block title %}Découvrir Dunia{% endblock %}
+
+{% block content %}
+<main class="mx-auto w-full max-w-[1600px] space-y-3 px-3 py-3 sm:px-5 lg:px-8">
+  <section class="relative isolate overflow-hidden rounded-2xl bg-linear-to-br from-slate-950 via-blue-950 to-blue-800 p-4 text-white shadow-xl sm:p-5 lg:p-6">
+    <div class="absolute -right-16 -top-20 -z-10 h-72 w-72 rounded-full border border-white/15 sm:h-96 sm:w-96"></div>
+    <div class="absolute right-20 top-20 -z-10 h-44 w-44 rounded-full border border-white/10"></div>
+    <div class="grid items-center gap-3 lg:grid-cols-[1.15fr_.85fr]">
+      <div>
+        <h1 class="max-w-3xl text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl">Decouvrez tout ce que vous pouvez construire avec DUNIA.</h1>
+        <p class="mt-2 max-w-2xl text-sm leading-5 text-blue-50/85 sm:text-base">Un espace pour apprendre, creer, collaborer et transformer vos idees en opportunites concretes.</p>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <a href="{% url 'home_b' %}" class="btn btn-sm rounded-lg border-0 bg-white text-blue-950 hover:bg-blue-50">Explorer les formations</a>
+          <a href="{% url 'communautes' %}" class="btn btn-sm btn-ghost rounded-lg text-white hover:bg-white/10">Rejoindre la communaute</a>
+        </div>
+      </div>
+      <img src="{% static 'src/g.webp' %}" alt="Des apprenants reunis autour d'un projet" class="h-44 w-full rounded-xl object-cover sm:h-56 lg:h-64">
+    </div>
+  </section>
+
+  <section aria-labelledby="decouvrir-actions" class="space-y-2">
+    <div class="px-1"><h2 id="decouvrir-actions" class="text-xl font-bold sm:text-2xl">Ce que vous pouvez faire sur DUNIA</h2></div>
+    <div class="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 scrollbar-none [&::-webkit-scrollbar]:hidden [&>article]:min-w-[86%] [&>article]:snap-start sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 sm:[&>article]:min-w-0 lg:grid-cols-4">
+      <article class="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm"><p class="text-xs font-black tracking-wide text-primary">01</p><h3 class="mt-1 font-bold">Vous former en ligne</h3><p class="mt-1 text-sm leading-5 text-base-content/70">Accedez a des cours concrets et developpez des competences utiles pour vos projets.</p></article>
+      <article class="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm"><p class="text-xs font-black tracking-wide text-primary">02</p><h3 class="mt-1 font-bold">Construire votre portfolio</h3><p class="mt-1 text-sm leading-5 text-base-content/70">Mettez en valeur vos realisations et presentez votre progression a la communaute.</p></article>
+      <article class="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm"><p class="text-xs font-black tracking-wide text-primary">03</p><h3 class="mt-1 font-bold">Publier et partager</h3><p class="mt-1 text-sm leading-5 text-base-content/70">Diffusez vos idees, vos analyses et vos experiences pour inspirer d'autres membres.</p></article>
+      <article class="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm"><p class="text-xs font-black tracking-wide text-primary">04</p><h3 class="mt-1 font-bold">Rejoindre des communautes</h3><p class="mt-1 text-sm leading-5 text-base-content/70">Echangez avec des profils similaires, collaborez et avancez dans un cadre motivant.</p></article>
+      <article class="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm"><p class="text-xs font-black tracking-wide text-primary">05</p><h3 class="mt-1 font-bold">Participer a des evenements</h3><p class="mt-1 text-sm leading-5 text-base-content/70">Inscrivez-vous a des ateliers, rencontres et sessions pour apprendre sur le terrain.</p></article>
+      <article class="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm"><p class="text-xs font-black tracking-wide text-primary">06</p><h3 class="mt-1 font-bold">Trouver des opportunites</h3><p class="mt-1 text-sm leading-5 text-base-content/70">Consultez des offres d'emploi, de stage ou de collaboration adaptees a votre profil.</p></article>
+      <article class="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm"><p class="text-xs font-black tracking-wide text-primary">07</p><h3 class="mt-1 font-bold">Lancer des projets a plusieurs</h3><p class="mt-1 text-sm leading-5 text-base-content/70">Créez des initiatives collectives et transformez une idee en solution concrete.</p></article>
+      <article class="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm"><p class="text-xs font-black tracking-wide text-primary">08</p><h3 class="mt-1 font-bold">Suivre votre evolution</h3><p class="mt-1 text-sm leading-5 text-base-content/70">Gardez une vision claire de vos progres et de vos prochains objectifs.</p></article>
+    </div>
+  </section>
+
+  <section aria-labelledby="decouvrir-espaces" class="space-y-2">
+    <div class="px-1"><h2 id="decouvrir-espaces" class="text-xl font-bold sm:text-2xl">Trouvez votre prochain espace</h2></div>
+    <div class="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 scrollbar-none [&::-webkit-scrollbar]:hidden [&>a]:min-w-[86%] [&>a]:snap-start sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 sm:[&>a]:min-w-0 lg:grid-cols-4">
+      <a href="{% url 'cours_list' %}" class="group overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm transition-shadow hover:shadow-md"><img src="{% static 'src/c.webp' %}" alt="Cours et ressources d'apprentissage" class="aspect-4/3 w-full object-cover" loading="lazy"><div class="p-3"><h3 class="font-bold group-hover:text-primary">Cours en ligne</h3><p class="mt-1 text-sm leading-5 text-base-content/70">Des ressources video, audio et ecrites a consulter quand vous voulez.</p><span class="mt-2 inline-flex text-sm font-semibold text-primary">Voir les cours →</span></div></a>
+      <a href="{% url 'galerie_projets' %}" class="group overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm transition-shadow hover:shadow-md"><img src="{% static 'src/i.webp' %}" alt="Projet concu par des apprenants" class="aspect-4/3 w-full object-cover" loading="lazy"><div class="p-3"><h3 class="font-bold group-hover:text-primary">Projets des membres</h3><p class="mt-1 text-sm leading-5 text-base-content/70">Des realisations inspirees par les besoins du terrain et de la communaute.</p><span class="mt-2 inline-flex text-sm font-semibold text-primary">Decouvrir les projets →</span></div></a>
+      <a href="{% url 'evenements_pro' %}" class="group overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm transition-shadow hover:shadow-md"><img src="{% static 'src/a.webp' %}" alt="Rencontre et atelier collaboratif" class="aspect-4/3 w-full object-cover" loading="lazy"><div class="p-3"><h3 class="font-bold group-hover:text-primary">Evenements</h3><p class="mt-1 text-sm leading-5 text-base-content/70">Rencontres, ateliers et sessions pour accelerer votre apprentissage.</p><span class="mt-2 inline-flex text-sm font-semibold text-primary">Voir le calendrier →</span></div></a>
+      <a href="{% url 'offres_emploi' %}" class="group overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm transition-shadow hover:shadow-md"><img src="{% static 'src/e.webp' %}" alt="Collaboration autour d'une opportunite professionnelle" class="aspect-4/3 w-full object-cover" loading="lazy"><div class="p-3"><h3 class="font-bold group-hover:text-primary">Emplois et stages</h3><p class="mt-1 text-sm leading-5 text-base-content/70">Explorez des opportunites pour integrer des equipes et progresser.</p><span class="mt-2 inline-flex text-sm font-semibold text-primary">Voir les opportunites →</span></div></a>
+    </div>
+  </section>
+
+  <section class="rounded-2xl border border-primary/15 bg-primary/5 p-4 sm:p-5">
+    <h2 class="text-lg font-extrabold sm:text-xl">Avec DUNIA, vous ne consommez pas seulement du contenu.</h2>
+    <p class="mt-1 text-sm leading-6 text-base-content/80 sm:text-base">Vous construisez votre trajectoire, vous collaborez avec d'autres talents et vous transformez vos ambitions en resultats.</p>
+  </section>
+</main>
+{% endblock %}

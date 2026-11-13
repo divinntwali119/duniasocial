@@ -1,0 +1,40 @@
+# Python environments and cache
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.DS_Store
+.idea/
+
+# Node.js dependencies
+node_modules/
+
+# Local environment variables
+.env
+.env.*
+!.env.example
+!.env.example.template
+*.pem
+*.key
+secrets.json
+credentials.json
+
+# Local database and uploaded files
+db.sqlite3
+db.sqlite3-*
+*.sqlite3
+*.sqlite3-*
+media/
+publication_image/
+private_media/
+staticfiles/
+*.log
+dist/
+build/
+*.egg-info/

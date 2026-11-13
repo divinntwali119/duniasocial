@@ -1,0 +1,29 @@
+<section class="mt-4 rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm sm:p-4" aria-labelledby="commentaires-titre">
+    <div class="mb-3"><h3 id="commentaires-titre" class="text-base font-bold">Commentaires <span class="font-normal text-base-content/55">({{ comments|length }})</span></h3></div>
+
+    <form method="post" action="{% url 'comment_create' %}" class="mb-4 rounded-lg bg-base-200/60 p-3">
+        {% csrf_token %}
+        <input type="hidden" name="type_cible" value="{{ type_cible }}">
+        <input type="hidden" name="object_id" value="{{ object_id }}">
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <div class="grid gap-2 sm:grid-cols-[minmax(10rem,.35fr)_minmax(0,1fr)]">
+            <label class="form-control gap-1"><span class="label-text text-xs font-semibold">Votre nom</span><input type="text" name="nom" required autocomplete="name" class="input input-bordered input-sm w-full rounded-lg"></label>
+            <label class="form-control gap-1"><span class="label-text text-xs font-semibold">Votre commentaire</span><textarea name="message" required rows="2" class="textarea textarea-bordered w-full rounded-lg" placeholder="Partagez votre réaction…"></textarea></label>
+        </div>
+        <div class="mt-2 flex justify-end"><button type="submit" class="btn btn-primary btn-sm rounded-lg">Publier le commentaire</button></div>
+    </form>
+
+    <div class="space-y-2">
+        {% for c in comments %}
+        <article class="flex items-start gap-2.5 rounded-lg border border-base-200 p-3">
+            <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary" aria-hidden="true">{{ c.nom|first|upper }}</span>
+            <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5"><span class="text-sm font-semibold">{{ c.nom }}</span><time class="text-xs text-base-content/50" datetime="{{ c.date_creation|date:'c' }}">{{ c.date_creation|timesince }}</time></div>
+                <p class="mt-1 whitespace-pre-line text-sm leading-5 text-base-content/80">{{ c.message }}</p>
+            </div>
+        </article>
+        {% empty %}
+        <p class="rounded-lg border border-dashed border-base-300 px-3 py-4 text-center text-sm text-base-content/60">Aucun commentaire pour le moment. Lancez la discussion.</p>
+        {% endfor %}
+    </div>
+</section>

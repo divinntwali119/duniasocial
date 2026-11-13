@@ -1,0 +1,48 @@
+{% extends 'dunia_app/base.html' %}
+
+{% block title %}Candidatures · {{ offre.titre }} · Dunia{% endblock %}
+
+{% block content %}
+<main class="mx-auto max-w-5xl px-3 py-5 sm:px-5">
+  <a class="link link-primary text-sm" href="{% url 'espace_entreprises' %}">← Retour à l’espace entreprises</a>
+  <header class="mt-3 rounded-3xl bg-linear-to-br from-blue-950 via-primary to-cyan-600 p-5 text-primary-content shadow-sm sm:p-7">
+    <p class="text-xs font-bold uppercase tracking-[.2em] text-cyan-100">{{ entreprise.nom }}</p>
+    <h1 class="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">Candidatures à « {{ offre.titre }} »</h1>
+    <p class="mt-2 text-sm text-white/80">Consultez les dossiers et mettez à jour leur étape de traitement.</p>
+  </header>
+
+  <section class="mt-4 space-y-3" aria-label="Liste des candidatures">
+    {% for candidature in candidatures %}
+    <article class="rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm sm:p-5">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 class="font-bold">{{ candidature.candidat.get_full_name|default:candidature.candidat.username }}</h2>
+          <a class="link link-primary text-sm" href="mailto:{{ candidature.candidat.email }}">{{ candidature.candidat.email }}</a>
+          <p class="mt-2 whitespace-pre-line text-sm text-base-content/80">{{ candidature.motivation }}</p>
+          <a class="btn btn-outline btn-sm mt-3" href="{% url 'job_application_cv_download' candidature.pk %}">Télécharger le CV PDF</a>
+        </div>
+        <span class="badge badge-outline">{{ candidature.get_statut_display }}</span>
+      </div>
+      <form method="post" class="mt-4 flex flex-wrap items-end gap-2 border-t border-base-200 pt-4">
+        {% csrf_token %}
+        <input type="hidden" name="application_id" value="{{ candidature.pk }}">
+        <label class="form-control min-w-56 flex-1">
+          <span class="label-text mb-1 text-xs">Étape du dossier</span>
+          <select class="select select-bordered select-sm w-full" name="statut" aria-label="Statut de la candidature de {{ candidature.candidat.username }}">
+            {% for code, label in statuts_candidature %}
+            <option value="{{ code }}"{% if candidature.statut == code %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <button class="btn btn-primary btn-sm" type="submit">Enregistrer</button>
+      </form>
+    </article>
+    {% empty %}
+    <div class="rounded-2xl border border-dashed border-base-300 bg-base-100 p-8 text-center">
+      <h2 class="font-bold">Aucune candidature reçue</h2>
+      <p class="mt-1 text-sm text-base-content/65">Les nouveaux dossiers apparaîtront ici.</p>
+    </div>
+    {% endfor %}
+  </section>
+</main>
+{% endblock %}

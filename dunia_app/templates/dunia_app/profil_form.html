@@ -1,0 +1,50 @@
+{% extends 'dunia_app/base.html' %}
+
+{% block title %}Mon profil · Dunia{% endblock %}
+
+{% block content %}
+<main class="mx-auto max-w-5xl px-3 py-5 pb-28 sm:px-5 sm:py-8">
+  <div class="mb-5">
+    <p class="text-sm font-semibold text-primary">Votre espace</p>
+    <h1 class="mt-1 text-2xl font-bold sm:text-3xl">Modifier mon profil</h1>
+    <p class="mt-2 text-base-content/70">Présentez votre parcours et choisissez les informations visibles dans l’annuaire.</p>
+  </div>
+  <form method="post" enctype="multipart/form-data" class="space-y-6" data-loading-form>
+    {% csrf_token %}
+    <section class="card border border-base-300 bg-base-100">
+      <div class="card-body">
+        <h2 class="card-title">Informations du compte</h2>
+        {% if account_form.non_field_errors %}<div class="alert alert-error">{{ account_form.non_field_errors }}</div>{% endif %}
+        <div class="grid gap-4 sm:grid-cols-2">
+          {% for field in account_form %}
+          <label class="form-control w-full">
+            <span class="label"><span class="label-text font-medium">{{ field.label }}</span></span>
+            {{ field }}
+            {% for error in field.errors %}<span class="text-sm text-error">{{ error }}</span>{% endfor %}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+    <section class="card border border-base-300 bg-base-100">
+      <div class="card-body">
+        <h2 class="card-title">Profil Dunia</h2>
+        <div class="grid gap-4 sm:grid-cols-2">
+          {% for field in profile_form %}
+          <label class="form-control w-full {% if field.name == 'bio' %}sm:col-span-2{% endif %}">
+            <span class="label"><span class="label-text font-medium">{{ field.label }}</span></span>
+            {{ field }}
+            {% if field.help_text %}<span class="text-xs text-base-content/60">{{ field.help_text }}</span>{% endif %}
+            {% for error in field.errors %}<span class="text-sm text-error">{{ error }}</span>{% endfor %}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+    <div class="flex flex-wrap gap-3">
+      <button class="btn btn-primary min-h-11 rounded-xl" type="submit"><span data-button-label>Enregistrer mon profil</span><span class="loading loading-spinner loading-sm hidden" data-loading-spinner aria-hidden="true"></span></button>
+      <a class="btn btn-ghost rounded-xl" href="{% url 'tableau_bord' %}">Annuler</a>
+    </div>
+  </form>
+</main>
+{% endblock %}

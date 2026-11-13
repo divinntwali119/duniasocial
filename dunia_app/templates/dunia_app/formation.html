@@ -1,0 +1,97 @@
+{% extends 'dunia_app/base.html' %}
+{% load static %}
+
+{% block title %}Formations · Dunia{% endblock %}
+
+{% block content %}
+<main class="mx-auto max-w-6xl px-3 py-5 pb-28 sm:px-6 sm:py-8">
+    <section class="mb-4 overflow-hidden rounded-2xl border border-base-300 bg-linear-to-br from-primary/10 via-base-100 to-secondary/10">
+        <div class="grid items-center gap-5 p-4 sm:p-6 lg:grid-cols-[1fr_auto] lg:p-8">
+            <div><h1 class="max-w-2xl text-2xl font-extrabold tracking-tight sm:text-4xl">Trouvez la formation qui vous ressemble.</h1><p class="mt-2 max-w-2xl text-sm leading-6 text-base-content/70 sm:text-base">Comparez les programmes, explorez les prochaines sessions et choisissez votre prochain cap.</p>
+                <div class="mt-4 flex flex-wrap gap-2"><a href="{% url 'orientation_quiz' %}" class="btn btn-primary btn-sm min-h-10 rounded-lg">Faire le quiz d’orientation <span aria-hidden="true">→</span></a><a href="{% url 'calendrier_sessions' %}" class="btn btn-outline btn-sm min-h-10 rounded-lg">Voir le calendrier</a><a href="{% url 'candidature_suivi' %}" class="btn btn-ghost btn-sm min-h-10 rounded-lg">Suivre ma candidature</a></div>
+            </div>
+            <div class="flex items-center gap-3 rounded-xl border border-base-300/70 bg-base-100/80 p-3 sm:p-4"><span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary" aria-hidden="true"><svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/><path d="M8 7h8M8 11h6"/></svg></span><div><p class="text-2xl font-extrabold leading-none">{{ page_obj.paginator.count }}</p><p class="mt-1 text-xs text-base-content/60">programme{{ page_obj.paginator.count|pluralize:"s" }} disponible{{ page_obj.paginator.count|pluralize:"s" }}</p></div></div>
+        </div>
+    </section>
+
+    <section class="mb-5 overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm" aria-labelledby="filtres-titre">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-base-200 px-3 py-2.5 sm:px-4"><div><h2 id="filtres-titre" class="font-bold">Affinez votre recherche</h2><p class="text-xs text-base-content/55">Combinez les critères pour trouver un programme adapté.</p></div>{% if request.GET %}<a href="{% url 'home_b' %}" class="btn btn-ghost btn-xs rounded-md">Tout effacer</a>{% endif %}</div>
+        <form method="get" class="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 sm:p-4 lg:grid-cols-4" data-loading-form>
+            {% for field in filter_form %}<label class="form-control gap-1"><span class="label-text text-xs font-semibold">{{ field.label }}</span>{{ field }}</label>{% endfor %}
+            <div class="flex items-end gap-2 sm:col-span-2 lg:col-span-4"><button class="btn btn-primary btn-sm min-h-10 rounded-lg px-5" type="submit"><span data-button-label>Rechercher</span><span class="loading loading-spinner loading-sm hidden" data-loading-spinner aria-hidden="true"></span></button>{% if request.GET %}<a href="{% url 'home_b' %}" class="btn btn-ghost btn-sm min-h-10 rounded-lg">Réinitialiser</a>{% endif %}</div>
+        </form>
+    </section>
+
+    <div class="mb-3 flex flex-wrap items-end justify-between gap-2"><div><h2 class="text-xl font-extrabold sm:text-2xl">Les programmes</h2><p class="mt-1 text-xs text-base-content/60">{{ page_obj.paginator.count }} résultat{{ page_obj.paginator.count|pluralize:"s" }}{% if request.GET.q %} pour « {{ request.GET.q }} »{% endif %}</p></div>{% if is_paginated %}<span class="text-xs text-base-content/55">Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>{% endif %}</div>
+    <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-label="Catalogue des formations">
+        {% for information in information_list %}
+        <article class="group flex h-full flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
+            {% if information.photo %}
+            <img src="{{ information.photo.url }}" alt="{{ information.titre }}" class="aspect-video w-full object-cover transition duration-300 group-hover:scale-[1.02]">
+            {% else %}
+            <div class="grid aspect-video place-items-center bg-linear-to-br from-primary/10 to-secondary/20 text-primary" aria-hidden="true"><svg class="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.3 5.2L20 10l-5.7 1.8L12 17l-2.3-5.2L4 10l5.7-1.8L12 3Z"/><path d="m19 16 .9 2.1L22 19l-2.1.9L19 22l-.9-2.1L16 19l2.1-.9L19 16Z"/></svg></div>
+            {% endif %}
+            <div class="flex flex-1 flex-col p-3.5 sm:p-4">
+                <div class="flex flex-wrap gap-1.5"><span class="badge badge-primary badge-outline badge-sm">{{ information.get_type_programme_display }}</span><span class="badge badge-ghost badge-sm">{{ information.get_niveau_display }}</span>{% if information.get_domaine_display %}<span class="badge badge-ghost badge-sm">{{ information.get_domaine_display }}</span>{% endif %}</div>
+                <h3 class="mt-2 text-base font-bold leading-snug sm:text-lg">{{ information.titre }}</h3>
+                <p class="mt-1.5 line-clamp-3 text-xs leading-5 text-base-content/65">{{ information.contenue|truncatewords:28 }}</p>
+                <div class="mt-3 grid grid-cols-2 gap-2 border-y border-base-200 py-2.5 text-xs text-base-content/70"><span class="flex items-center gap-1.5"><svg class="h-4 w-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>{{ information.heures }} h</span><span class="flex items-center gap-1.5"><svg class="h-4 w-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>{{ information.module }} module{{ information.module|pluralize:"s" }}</span><span class="flex items-center gap-1.5"><svg class="h-4 w-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h6"/></svg>{{ information.get_format_formation_display }}</span><span class="flex items-center gap-1.5 truncate"><svg class="h-4 w-4 shrink-0 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg><span class="truncate">{{ information.lieu|default:"À préciser" }}</span></span></div>
+                <div class="mt-auto flex items-center justify-between gap-2 pt-3"><span class="text-sm font-bold">{% if information.frais %}{{ information.frais|floatformat:0 }} FCFA{% else %}{{ information.get_choix_display }}{% endif %}</span><button type="button" class="btn btn-primary btn-sm min-h-9 rounded-lg" data-dialog-open="#programme-{{ information.pk }}">Voir le programme <span aria-hidden="true">→</span></button>
+                </div>
+            </div>
+        </article>
+        <dialog id="programme-{{ information.pk }}" class="modal modal-bottom sm:modal-middle" data-dismissible-dialog aria-labelledby="programme-titre-{{ information.pk }}">
+            <div class="modal-box max-h-[92dvh] max-w-3xl overflow-y-auto p-0 sm:max-h-[88dvh]">
+                <header class="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-base-200 bg-base-100/95 p-4 backdrop-blur sm:p-5">
+                    <div class="min-w-0"><div class="flex flex-wrap gap-1.5"><span class="badge badge-primary badge-outline badge-sm">{{ information.get_type_programme_display }}</span><span class="badge badge-ghost badge-sm">{{ information.get_niveau_display }}</span></div><h2 id="programme-titre-{{ information.pk }}" class="mt-2 text-xl font-extrabold leading-tight sm:text-2xl">{{ information.titre }}</h2></div>
+                    <form method="dialog"><button type="submit" class="btn btn-ghost btn-sm btn-circle shrink-0" aria-label="Fermer le programme"><svg aria-hidden="true" viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="m6 6 12 12M18 6 6 18"/></svg></button></form>
+                </header>
+                <div class="space-y-4 p-4 sm:p-5">
+                    {% if information.photo %}<img src="{{ information.photo.url }}" alt="" class="aspect-video w-full rounded-xl object-cover" loading="lazy">{% endif %}
+                    <p class="whitespace-pre-line text-sm leading-6 text-base-content/75">{{ information.contenue|default:"La présentation détaillée de ce programme sera bientôt disponible." }}</p>
+                    <dl class="grid grid-cols-2 gap-2 sm:grid-cols-3"><div class="rounded-lg bg-base-200/70 p-3"><dt class="text-xs text-base-content/55">Durée</dt><dd class="mt-0.5 text-sm font-semibold">{{ information.heures }} heures</dd></div><div class="rounded-lg bg-base-200/70 p-3"><dt class="text-xs text-base-content/55">Modules</dt><dd class="mt-0.5 text-sm font-semibold">{{ information.module }}</dd></div><div class="rounded-lg bg-base-200/70 p-3"><dt class="text-xs text-base-content/55">Format</dt><dd class="mt-0.5 text-sm font-semibold">{{ information.get_format_formation_display }}</dd></div><div class="rounded-lg bg-base-200/70 p-3"><dt class="text-xs text-base-content/55">Lieu</dt><dd class="mt-0.5 text-sm font-semibold">{{ information.lieu|default:"À préciser" }}</dd></div><div class="rounded-lg bg-base-200/70 p-3"><dt class="text-xs text-base-content/55">Investissement</dt><dd class="mt-0.5 text-sm font-semibold">{% if information.frais %}{{ information.frais|floatformat:0 }} FCFA{% else %}{{ information.get_choix_display }}{% endif %}</dd></div>{% if information.paiement_echelonne %}<div class="rounded-lg bg-success/10 p-3"><dt class="text-xs text-base-content/55">Paiement</dt><dd class="mt-0.5 text-sm font-semibold">Échelonné possible</dd></div>{% endif %}</dl>
+                    {% if information.objectifs or information.competences or information.contenu_modules or information.prerequis %}
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        {% if information.objectifs %}<section class="rounded-xl border border-base-300 p-3"><h3 class="font-bold">Objectifs</h3><div class="mt-1 whitespace-pre-line text-sm leading-5 text-base-content/70">{{ information.objectifs }}</div></section>{% endif %}
+                        {% if information.competences %}<section class="rounded-xl border border-base-300 p-3"><h3 class="font-bold">Compétences visées</h3><div class="mt-1 whitespace-pre-line text-sm leading-5 text-base-content/70">{{ information.competences }}</div></section>{% endif %}
+                        {% if information.contenu_modules %}<section class="rounded-xl border border-base-300 p-3"><h3 class="font-bold">Contenu des modules</h3><div class="mt-1 whitespace-pre-line text-sm leading-5 text-base-content/70">{{ information.contenu_modules }}</div></section>{% endif %}
+                        {% if information.prerequis %}<section class="rounded-xl border border-base-300 p-3"><h3 class="font-bold">Prérequis</h3><div class="mt-1 whitespace-pre-line text-sm leading-5 text-base-content/70">{{ information.prerequis }}</div></section>{% endif %}
+                    </div>
+                    {% endif %}
+                    <section class="rounded-xl border border-base-300 p-3"><div class="flex items-center justify-between gap-2"><h3 class="font-bold">Prochaines sessions</h3><a href="{% url 'calendrier_sessions' %}" class="text-xs font-semibold text-primary hover:underline">Calendrier complet</a></div>
+                        {% for session in information.sessions_a_venir %}<div class="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-base-200 pt-2"><div><p class="text-sm font-semibold">{{ session.titre|default:information.titre }}</p><p class="text-xs text-base-content/60">{{ session.date_debut|date:"d/m/Y" }}{% if session.horaires %} · {{ session.horaires }}{% endif %}{% if session.lieu %} · {{ session.lieu }}{% endif %}</p></div><span class="badge badge-sm {% if session.places_restantes > 0 %}badge-success badge-outline{% else %}badge-ghost{% endif %}">{% if session.places_restantes > 0 %}{{ session.places_restantes }} place{{ session.places_restantes|pluralize:"s" }}{% else %}Complet{% endif %}</span></div>{% empty %}<p class="mt-2 text-sm text-base-content/60">Aucune date de session annoncée pour le moment.</p>{% endfor %}
+                    </section>
+                    <div class="flex flex-col gap-2 border-t border-base-200 pt-3 sm:flex-row">{% if information.bourse_disponible %}<a href="{% url 'aide_financiere_create' information.slug %}" class="btn btn-outline btn-sm rounded-lg sm:order-1">Demander une aide</a>{% endif %}{% if information.brochure %}<a href="{{ information.brochure.url }}" class="btn btn-ghost btn-sm rounded-lg" download>Télécharger la brochure</a>{% endif %}<a href="{% url 'info_detail' information.slug %}" class="btn btn-ghost btn-sm rounded-lg">Tous les détails</a><a href="{% url 'candidature_create' information.slug %}" class="btn btn-primary btn-sm rounded-lg sm:ml-auto">Candidater</a></div>
+                </div>
+            </div>
+            <form method="dialog" class="modal-backdrop"><button aria-label="Fermer le détail du programme">Fermer</button></form>
+        </dialog>
+        {% empty %}
+        <div class="col-span-full rounded-xl border border-dashed border-base-300 bg-base-100 p-7 text-center sm:p-10">
+            <span class="mx-auto grid h-12 w-12 place-items-center rounded-full bg-base-200 text-base-content/60" aria-hidden="true"><svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><h3 class="mt-3 text-lg font-bold">Aucune formation trouvée</h3><p class="mt-1 text-sm text-base-content/60">Essayez d’élargir vos filtres ou découvrez nos programmes autrement.</p><a href="{% url 'home_b' %}" class="btn btn-outline btn-sm mt-4 rounded-lg">Réinitialiser les filtres</a>
+        </div>
+        {% endfor %}
+    </section>
+
+    {% if is_paginated %}
+    <nav class="join mt-5 flex justify-center" aria-label="Pagination du catalogue">
+        {% if page_obj.has_previous %}<a class="join-item btn btn-sm" href="?{{ request.GET.urlencode }}&page={{ page_obj.previous_page_number }}">« Précédent</a>{% endif %}
+        <span class="join-item btn btn-sm btn-active">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}<a class="join-item btn btn-sm" href="?{{ request.GET.urlencode }}&page={{ page_obj.next_page_number }}">Suivant »</a>{% endif %}
+    </nav>
+    {% endif %}
+
+    {% if sessions_a_venir %}
+    <section class="mt-7" aria-labelledby="sessions-titre">
+        <div class="mb-3 flex items-end justify-between gap-3"><div><h2 id="sessions-titre" class="text-xl font-extrabold sm:text-2xl">Prochaines cohortes</h2><p class="mt-1 text-xs text-base-content/60">Dates de démarrage annoncées</p></div><a href="{% url 'calendrier_sessions' %}" class="btn btn-ghost btn-sm rounded-lg">Tout le calendrier <span aria-hidden="true">→</span></a></div>
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {% for session in sessions_a_venir %}
+            <article class="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm">
+                    <p class="text-xs font-semibold text-base-content/55">{{ session.date_debut|date:"d F Y" }}</p><h3 class="mt-1 font-bold">{{ session.titre|default:session.formation.titre }}</h3><p class="mt-1 text-xs text-base-content/65">{{ session.formation.titre }} · {{ session.get_format_formation_display }}{% if session.horaires %} · {{ session.horaires }}{% endif %}</p><div class="mt-2 flex items-center justify-between gap-2"><p class="text-xs">{{ session.places_restantes }} place{{ session.places_restantes|pluralize:"s" }} disponible{{ session.places_restantes|pluralize:"s" }}</p><a href="{% url 'info_detail' session.formation.slug %}" class="text-xs font-semibold text-primary hover:underline">Voir le programme →</a></div>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</main>
+{% endblock %}

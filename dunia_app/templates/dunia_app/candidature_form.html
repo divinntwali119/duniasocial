@@ -1,0 +1,25 @@
+{% extends 'dunia_app/base.html' %}
+
+{% block title %}Candidater · {{ formation.titre }}{% endblock %}
+
+{% block content %}
+<main class="mx-auto max-w-6xl px-3 py-5 pb-16 sm:px-5">
+    <a href="{% url 'info_detail' formation.slug %}" class="mb-3 inline-flex min-h-9 items-center gap-2 text-sm font-semibold text-primary hover:underline"><span aria-hidden="true">←</span> Retour à la formation</a>
+    <header class="rounded-2xl bg-linear-to-br from-blue-950 via-primary to-cyan-600 p-5 text-primary-content shadow-sm sm:p-6"><h1 class="text-2xl font-extrabold tracking-tight sm:text-3xl">Rejoindre {{ formation.titre }}</h1><p class="mt-2 max-w-2xl text-sm text-white/80">Présentez votre projet et vos coordonnées. L’équipe Dunia vous informera des prochaines étapes après examen du dossier.</p></header>
+    <div class="mt-3 grid items-start gap-3 lg:grid-cols-[minmax(16rem,.7fr)_minmax(0,1.3fr)]">
+        <aside class="space-y-3">
+            <section class="rounded-xl border border-base-300 bg-base-100 p-4 shadow-sm"><h2 class="text-base font-bold">Après l’envoi</h2><ol class="mt-3 space-y-3 text-sm"><li class="flex gap-3"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-content">1</span><span><strong>Dossier reçu</strong><span class="mt-0.5 block text-xs text-base-content/60">Une référence vous permettra de le retrouver.</span></span></li><li class="flex gap-3"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-base-200 text-xs font-bold">2</span><span><strong>Étude du dossier</strong><span class="mt-0.5 block text-xs text-base-content/60">Un test ou des documents peuvent être demandés.</span></span></li><li class="flex gap-3"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-base-200 text-xs font-bold">3</span><span><strong>Décision</strong><span class="mt-0.5 block text-xs text-base-content/60">Suivez l’état grâce à votre référence et votre e-mail.</span></span></li></ol></section>
+            {% if formation.sessions.exists %}<section class="rounded-xl border border-base-300 bg-base-100 p-4 shadow-sm"><h2 class="text-sm font-bold">Une session en vue ?</h2><p class="mt-1 text-xs leading-5 text-base-content/65">Vous pouvez sélectionner une cohorte disponible dans le formulaire, ou choisir plus tard.</p><a href="{% url 'calendrier_sessions' %}" class="mt-2 inline-flex text-xs font-semibold text-primary hover:underline">Voir le calendrier des sessions</a></section>{% endif %}
+        </aside>
+        <section class="rounded-xl border border-base-300 bg-base-100 p-4 shadow-sm sm:p-5">
+            <div class="mb-3"><h2 class="text-lg font-bold">Vos coordonnées et votre projet</h2><p class="mt-1 text-xs text-base-content/60">Les informations marquées d’un astérisque sont obligatoires. Le document PDF est facultatif.</p></div>
+            {% if form.non_field_errors %}<div class="alert alert-error mb-3 text-sm">{{ form.non_field_errors }}</div>{% endif %}
+            <form method="post" enctype="multipart/form-data" class="grid gap-3 sm:grid-cols-2">
+                {% csrf_token %}
+                {% for field in form %}<label class="form-control gap-1 {% if field.name == 'motivation' or field.name == 'session' or field.name == 'document' %}sm:col-span-2{% endif %}"><span class="label-text font-semibold">{{ field.label }}</span>{{ field }}{% if field.help_text %}<span class="label-text-alt text-base-content/55">{{ field.help_text }}</span>{% endif %}{% for error in field.errors %}<span class="text-sm text-error">{{ error }}</span>{% endfor %}</label>{% endfor %}
+                <div class="sm:col-span-2"><button type="submit" class="btn btn-primary w-full rounded-lg sm:w-auto">Envoyer ma candidature</button><p class="mt-2 text-xs text-base-content/55">Après validation, conservez la référence de suivi affichée à l’écran.</p></div>
+            </form>
+        </section>
+    </div>
+</main>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends 'dunia_app/base.html' %}
+
+{% block title %}Projets apprenants · Dunia{% endblock %}
+
+{% block content %}
+<main class="mx-auto max-w-7xl px-3 py-5 sm:px-5">
+  <section class="grid items-center gap-4 rounded-3xl bg-linear-to-br from-blue-950 via-primary to-cyan-700 p-5 text-white shadow-xl sm:p-7 lg:grid-cols-[1fr_auto]">
+    <div><p class="text-xs font-bold uppercase tracking-[.2em] text-cyan-100">Créativité en action</p><h1 class="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">La galerie des projets</h1><p class="mt-2 max-w-2xl text-sm text-blue-50/85">Découvrez les projets validés et les compétences développées par les apprenants.</p><a class="btn btn-primary btn-sm mt-4 rounded-lg border-0 bg-white text-blue-950 hover:bg-blue-50" href="{% url 'projet_deposer' %}">Partager mon projet</a></div>
+    <div class="h-40 w-full sm:h-48 lg:h-52 lg:w-72" aria-hidden="true">{% include 'dunia_app/partials/hero_illustration.html' with illustration_path='src/illustrations/project-collaboration.svg' %}</div>
+  </section>
+  <form method="get" class="mt-3 flex flex-wrap gap-2 rounded-xl border border-base-300 bg-base-100 p-3"><select class="select select-bordered select-sm min-w-56" name="domaine"><option value="">Tous les domaines</option>{% for value,label in domaines %}<option value="{{ value }}" {% if domaine_active == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><button class="btn btn-outline btn-sm rounded-lg" type="submit">Filtrer</button></form>
+  <div class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    {% for projet in projets %}
+    <article class="card overflow-hidden border border-base-300 bg-base-100 shadow-sm">
+      {% if projet.image %}<figure class="aspect-16/10"><img class="h-full w-full object-cover" src="{{ projet.image.url }}" alt="Illustration du projet {{ projet.titre }}"></figure>{% else %}<div class="flex aspect-16/10 items-center justify-center bg-linear-to-br from-primary/15 to-secondary/15 text-primary/50" aria-hidden="true"><svg viewBox="0 0 24 24" class="h-12 w-12" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path stroke-linecap="round" stroke-linejoin="round" d="m21 15-5-5L5 21"/></svg></div>{% endif %}
+      <div class="card-body gap-2 p-3"><h2 class="card-title text-base leading-snug">{{ projet.titre }}</h2><p class="text-xs text-base-content/65">Par {{ projet.auteur.get_full_name|default:projet.auteur.username }}{% if projet.formation %} · {{ projet.formation.titre }}{% endif %}</p><p class="line-clamp-4 text-sm leading-5">{{ projet.description|truncatechars:200 }}</p>{% if projet.competences %}<div class="flex flex-wrap gap-1"><span class="badge badge-ghost">{{ projet.competences }}</span></div>{% endif %}<div class="card-actions mt-1">{% if projet.url_demo %}<a class="btn btn-primary btn-sm rounded-lg" href="{{ projet.url_demo }}" target="_blank" rel="noopener">Voir la démo</a>{% endif %}{% if projet.url_code %}<a class="btn btn-outline btn-sm rounded-lg" href="{{ projet.url_code }}" target="_blank" rel="noopener">Voir le code</a>{% endif %}</div></div>
+    </article>
+    {% empty %}<div class="alert sm:col-span-2 xl:col-span-3">Aucun projet publié dans ce domaine pour le moment.</div>{% endfor %}
+  </div>
+</main>
+{% endblock %}

@@ -1,0 +1,22 @@
+{
+  "name": "dunia",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "scripts": {
+    "test": "python manage.py test dunia_app",
+    "dev:css": "npx @tailwindcss/cli -i ./dunia_app/static/css/input.css -o ./dunia_app/static/css/output.css --watch",
+    "build:css": "npx @tailwindcss/cli -i ./dunia_app/static/css/input.css -o ./dunia_app/static/css/output.css --minify",
+    "dev": "concurrently \"npm run dev:css\" \"python manage.py runserver\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "concurrently": "^10.0.5",
+    "daisyui": "^5.7.20",
+    "tailwindcss": "^4.3.3"
+  }
+}

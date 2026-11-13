@@ -1,0 +1,22 @@
+{% extends 'dunia_app/base.html' %}
+
+{% block title %}Annuaire des apprenants · Dunia{% endblock %}
+
+{% block content %}
+<main class="mx-auto max-w-7xl px-4 py-10">
+  <section><h1 class="text-3xl font-bold">Annuaire des apprenants</h1><p class="mt-2 max-w-2xl text-base-content/70">Découvrez les profils qui ont choisi de partager leur parcours et leurs compétences.</p></section>
+  <form method="get" class="mt-6 flex flex-wrap gap-3"><select class="select select-bordered min-w-56" name="domaine"><option value="">Tous les domaines</option>{% for value,label in domaines %}<option value="{{ value }}" {% if domaine_active == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><button class="btn btn-primary rounded-xl" type="submit">Filtrer</button></form>
+  <div class="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    {% for profil in profils %}
+      <article class="card border border-base-300 bg-base-100 shadow-sm"><div class="card-body"><a href="{% url 'profil_public' profil.user.username %}" class="flex items-center gap-4">{% if profil.photo %}<img class="h-14 w-14 rounded-full object-cover" src="{{ profil.photo.url }}" alt="Photo de {{ profil.user.get_full_name }}">{% else %}{% include 'dunia_app/partials/avatar_fallback.html' with avatar_classes='h-14 w-14 rounded-full border border-base-200' %}{% endif %}<div><h2 class="text-lg font-bold">{{ profil.user.get_full_name|default:profil.user.username }}</h2><p class="text-sm text-base-content/60">{{ profil.ville|default:'Communauté Dunia' }}</p></div></a>{% if profil.bio %}<p class="mt-3 text-sm text-base-content/70">{{ profil.bio|truncatechars:180 }}</p>{% endif %}<div class="mt-4 grid grid-cols-2 gap-2">
+        {% if request.user.is_authenticated %}
+          {% if profil.relation_state == 'amis' %}<a class="btn btn-primary btn-sm min-h-11 rounded-xl" href="{% url 'conversation_demarrer' profil.user.username %}">Message</a><a class="btn btn-ghost btn-sm min-h-11 rounded-xl" href="{% url 'profil_public' profil.user.username %}">Profil</a>
+          {% elif profil.relation_state == 'envoyee' %}<span class="btn btn-outline btn-sm min-h-11 cursor-default rounded-xl">Invitation envoyée</span><a class="btn btn-ghost btn-sm min-h-11 rounded-xl" href="{% url 'profil_public' profil.user.username %}">Profil</a>
+          {% elif profil.relation_state == 'recue' %}<a class="btn btn-primary btn-sm min-h-11 rounded-xl" href="{% url 'amis' %}">Répondre</a><a class="btn btn-ghost btn-sm min-h-11 rounded-xl" href="{% url 'profil_public' profil.user.username %}">Profil</a>
+          {% else %}<form method="post" action="{% url 'demande_ami' profil.user.pk %}" data-loading-form>{% csrf_token %}<button class="btn btn-primary btn-sm min-h-11 w-full rounded-xl" type="submit"><span data-button-label>Ajouter</span><span class="loading loading-spinner loading-sm hidden" data-loading-spinner aria-hidden="true"></span></button></form><a class="btn btn-ghost btn-sm min-h-11 rounded-xl" href="{% url 'profil_public' profil.user.username %}">Profil</a>{% endif %}
+        {% else %}<a class="btn btn-outline btn-sm min-h-11 rounded-xl" href="{% url 'connexion' %}">Se connecter</a><a class="btn btn-ghost btn-sm min-h-11 rounded-xl" href="{% url 'profil_public' profil.user.username %}">Profil</a>{% endif %}
+      </div></div></article>
+    {% empty %}<div class="alert sm:col-span-2 lg:col-span-3">Aucun profil public ne correspond à ce filtre.</div>{% endfor %}
+  </div>
+</main>
+{% endblock %}

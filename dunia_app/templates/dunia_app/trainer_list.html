@@ -1,0 +1,14 @@
+{% extends 'dunia_app/base.html' %}
+
+{% block title %}Formateurs · Dunia{% endblock %}
+
+{% block content %}
+<main class="mx-auto max-w-7xl px-4 py-10">
+  <section><h1 class="text-3xl font-bold">Nos formateurs</h1><p class="mt-2 max-w-2xl text-base-content/70">Rencontrez les professionnels qui accompagnent les apprenants Dunia.</p></section>
+  <div class="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    {% for formateur in formateurs %}
+    <article class="card border border-base-300 bg-base-100 shadow-sm"><div class="card-body"><div class="flex items-center gap-4">{% if formateur.user.profil_dunia.photo %}<img class="h-16 w-16 rounded-full object-cover" src="{{ formateur.user.profil_dunia.photo.url }}" alt="Photo de {{ formateur.user.get_full_name }}">{% else %}{% include 'dunia_app/partials/avatar_fallback.html' with avatar_classes='h-16 w-16 rounded-full border border-base-200' %}{% endif %}<div><h2 class="text-lg font-bold">{{ formateur.user.get_full_name|default:formateur.user.username }}</h2><p class="text-sm text-base-content/60">{{ formateur.titre|default:'Formateur Dunia' }}</p></div></div>{% if formateur.domaines %}<p class="mt-3 text-sm font-medium text-primary">{{ formateur.domaines }}</p>{% endif %}{% if formateur.experience %}<p class="mt-2 whitespace-pre-line text-sm text-base-content/70">{{ formateur.experience|truncatechars:220 }}</p>{% endif %}{% if formateur.certifications %}<p class="mt-2 text-xs text-base-content/60">{{ formateur.certifications|truncatechars:160 }}</p>{% endif %}</div></article>
+    {% empty %}<div class="alert sm:col-span-2 lg:col-span-3">Les profils de nos formateurs seront publiés prochainement.</div>{% endfor %}
+  </div>
+</main>
+{% endblock %}
