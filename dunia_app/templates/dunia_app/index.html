@@ -75,14 +75,14 @@
         <span class="indicator"><span class="indicator-item indicator-bottom badge badge-primary badge-xs"></span><span class="grid h-14 w-14 place-items-center rounded-full bg-primary text-white shadow-sm sm:h-16 sm:w-16"><svg aria-hidden="true" viewBox="0 0 24 24" class="h-6 w-6" fill="currentColor"><path d="M4.5 3H11v17.2c-2.1-1.6-4.8-1.8-8-.6V4.5C3 3.67 3.67 3 4.5 3Zm15 0H13v17.2c2.1-1.6 4.8-1.8 8-.6V5c0-1.1-.9-2-2-2Z"/></svg></span></span>
         <span class="text-xs font-medium">Cours</span>
       </a>
-      <button type="button" disabled aria-disabled="true" title="Équipe — bientôt disponible" class="flex w-16 shrink-0 cursor-not-allowed flex-col items-center gap-1.5 text-center opacity-55" aria-label="Équipe pédagogique, bientôt disponible">
-        <span class="relative grid h-14 w-14 place-items-center rounded-full bg-base-300 text-base-content/70 sm:h-16 sm:w-16"><svg aria-hidden="true" viewBox="0 0 24 24" class="h-6 w-6" fill="currentColor"><path d="M9 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.86 0-7 1.79-7 4v2h14v-2c0-2.21-3.14-4-7-4Zm9-2a3.5 3.5 0 1 0-2.43-6.02A5.96 5.96 0 0 1 17 8c0 1.49-.55 2.85-1.45 3.89.76.08 1.58.12 2.45.12Zm0 2c-.71 0-1.38.04-2 .12 1.24.9 2 2.1 2 3.88v2h4v-2c0-2.21-1.79-4-4-4Z"/></svg><span class="absolute -right-0.5 -top-0.5 grid h-5 w-5 place-items-center rounded-full bg-base-100 text-base-content/60"><svg aria-hidden="true" viewBox="0 0 24 24" class="h-3 w-3" fill="currentColor"><path d="M17 8h-1V6a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2ZM10 6a2 2 0 1 1 4 0v2h-4V6Z"/></svg></span></span>
-        <span class="text-xs text-base-content/60">Équipe</span>
-      </button>
-      <button type="button" disabled aria-disabled="true" title="Certifications — bientôt disponibles" class="flex w-16 shrink-0 cursor-not-allowed flex-col items-center gap-1.5 text-center opacity-55" aria-label="Certifications, bientôt disponibles">
-        <span class="relative grid h-14 w-14 place-items-center rounded-full bg-base-300 text-base-content/70 sm:h-16 sm:w-16"><svg aria-hidden="true" viewBox="0 0 24 24" class="h-6 w-6" fill="currentColor"><path d="M5 3h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-4l-3 4-3-4H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm3 4v2h8V7H8Zm0 4v2h5v-2H8Z"/></svg><span class="absolute -right-0.5 -top-0.5 grid h-5 w-5 place-items-center rounded-full bg-base-100 text-base-content/60"><svg aria-hidden="true" viewBox="0 0 24 24" class="h-3 w-3" fill="currentColor"><path d="M17 8h-1V6a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2ZM10 6a2 2 0 1 1 4 0v2h-4V6Z"/></svg></span></span>
-        <span class="text-xs text-base-content/60">Certifs</span>
-      </button>
+      <a href="{% url 'formateurs' %}" class="flex w-16 shrink-0 flex-col items-center gap-1.5 text-center" aria-label="Équipe pédagogique">
+        <span class="grid h-14 w-14 place-items-center rounded-full bg-primary text-white shadow-sm sm:h-16 sm:w-16"><svg aria-hidden="true" viewBox="0 0 24 24" class="h-6 w-6" fill="currentColor"><path d="M9 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.86 0-7 1.79-7 4v2h14v-2c0-2.21-3.14-4-7-4Zm9-2a3.5 3.5 0 1 0-2.43-6.02A5.96 5.96 0 0 1 17 8c0 1.49-.55 2.85-1.45 3.89.76.08 1.58.12 2.45.12Zm0 2c-.71 0-1.38.04-2 .12 1.24.9 2 2.1 2 3.88v2h4v-2c0-2.21-1.79-4-4-4Z"/></svg></span>
+        <span class="text-xs font-medium">Équipe</span>
+      </a>
+      <a href="{% url 'credential_list' %}" class="flex w-16 shrink-0 flex-col items-center gap-1.5 text-center" aria-label="Certifications">
+        <span class="grid h-14 w-14 place-items-center rounded-full bg-primary text-white shadow-sm sm:h-16 sm:w-16"><svg aria-hidden="true" viewBox="0 0 24 24" class="h-6 w-6" fill="currentColor"><path d="M5 3h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-4l-3 4-3-4H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm3 4v2h8V7H8Zm0 4v2h5v-2H8Z"/></svg></span>
+        <span class="text-xs font-medium">Certifs</span>
+      </a>
     </nav>
 
     {% if page_obj.number == 1 %}

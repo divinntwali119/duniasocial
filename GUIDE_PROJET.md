@@ -1,16 +1,16 @@
 # Guide complet du projet Dunia
 
-> Guide de prise en main, d’état des fonctionnalités et de déploiement. État audité dans le workspace le **13 novembre 2026**. Les données, services et paramètres d’hébergement réels doivent être vérifiés avant une mise en ligne.
+> Guide de prise en main, d’état des fonctionnalités et de déploiement. État audité dans le workspace le **16 novembre 2026**. Les données, services et paramètres d’hébergement réels doivent être vérifiés avant une mise en ligne.
 
 ## 1. Résumé de l’état actuel
 
 | Élément | État vérifié |
 | --- | --- |
 | Application | Monolithe Django rendu côté serveur, une application principale `dunia_app` |
-| Versions du workspace | Django 6.0.6, Python 3.14, Tailwind CSS 4, DaisyUI 5, Pillow |
-| Routes | 76 routes applicatives nommées, plus l’administration Django |
-| Tests | 60 tests Django réussis au dernier contrôle |
-| Base locale | SQLite; migrations 0001–0026 appliquées, 0027–0028 encore en attente dans la base du workspace |
+| Versions du workspace | Django 6.0.6, Python 3.14, Tailwind CSS 4, DaisyUI 5, Pillow, ReportLab |
+| Routes | 88 routes applicatives nommées, plus l’administration Django |
+| Tests | 71 tests Django réussis après les derniers changements |
+| Base locale | SQLite; migrations 0001–0030 appliquées après sauvegarde locale |
 | Production prévue | PostgreSQL, cache partagé (Redis recommandé), Gunicorn, HTTPS, stockage persistant |
 | Déploiement réel | Pas encore provisionné par le dépôt : domaine, hébergeur, base, cache, SMTP et volumes restent à configurer |
 
@@ -24,24 +24,25 @@ Le smoke test résout les routes nommées et envoie une requête GET pour vérif
 - Profils de membres, demandes de rôle formateur ou entreprise et annuaire des apprenants/formateurs.
 - Fil d’actualité combinant publications éditoriales et publications de membres; réactions, commentaires, partages et pagination avec interactions JavaScript.
 - Demandes d’amitié, messagerie directe, états de lecture et notifications dans l’application.
-- Communautés publiques ou privées, adhésion et publications réservées aux membres.
+- Communautés publiques ou privées, demandes d’accès modérées et publications cachées aux non-membres.
 
 L’application utilise le modèle `User` standard de Django, sans modèle utilisateur personnalisé. Les boutons Google/Microsoft affichés sur certaines pages sont des éléments d’interface désactivés : aucun parcours OAuth n’est configuré.
 
 ### Formations et apprentissage
 
 - Catalogue de formations avec filtres, orientation, pages de détail, FAQ et calendrier des sessions.
-- Candidatures avec référence de suivi, demandes d’aide financière et réservation de sessions d’information.
+- Candidatures et demandes d’aide financière avec suivi par référence et e-mail; réservation de sessions d’information.
 - Gestion des capacités et des places de sessions; une admission confirmée peut retenir une place.
-- Cours vidéo, audio ou PDF, espace formateur, suivi de progression, évaluations et attribution des certifications liées à un cours.
+- Cours vidéo, audio ou PDF, espace formateur, suivi de progression, objectifs personnels modifiables et certificats PDF téléchargeables et vérifiables.
 
 ### Entreprises, emploi, projets et événements
 
 - Profils d’entreprise et validation distincte du rôle et du profil de l’organisation.
 - Offres d’emploi ou de stage soumises à validation; candidatures avec CV et suivi des statuts.
-- Galerie de projets, dépôt de projets soumis à modération et demandes de projets clients.
+- Galerie de projets, dépôt individuel ou en équipe, invitations réservées aux amis Dunia et acceptées par chaque coéquipier; les modifications d’un projet publié repassent en modération.
+- Objectifs personnels d’apprentissage avec date cible, modification, achèvement, reprise et suppression; ils ne sont visibles que par leur propriétaire.
 - Défis gratuits ou payants, inscriptions, travaux remis en plusieurs versions et retours de l’équipe.
-- Événements professionnels avec inscription et contrôle des places.
+- Événements professionnels avec inscription, contrôle des places, affichage de l’état et annulation avant le début.
 
 **Paiements des défis :** le processus est manuel. Le membre déclare une référence et l’équipe confirme ou refuse le paiement depuis l’administration; aucune passerelle de paiement n’est intégrée.
 
@@ -111,7 +112,7 @@ python manage.py migrate
 python manage.py createsuperuser
 ```
 
-**Attention à la base existante :** avant `migrate` sur une base qui contient des données, consulter son état et faire une sauvegarde. Dans la base SQLite de ce workspace, les migrations 0027 et 0028 sont en attente; la 0027 comprend une reprise de données et de nouvelles contraintes. Consulter [DEPLOIEMENT_SECURISE.md](DEPLOIEMENT_SECURISE.md) avant de les appliquer à une base déjà peuplée.
+**Attention à la base existante :** avant `migrate` sur une base qui contient des données, consulter son état et faire une sauvegarde. Dans la base SQLite de ce workspace, les migrations 0001 à 0030 sont appliquées. La 0030 ajoute les objectifs personnels, les invitations de collaboration et leur type de notification; l’état d’une base de production doit être vérifié séparément selon [DEPLOIEMENT_SECURISE.md](DEPLOIEMENT_SECURISE.md).
 
 Lancer le développement Django et Tailwind ensemble :
 
@@ -134,7 +135,7 @@ python manage.py makemigrations --check --dry-run
 python manage.py showmigrations dunia_app
 ```
 
-Au dernier contrôle, les **60 tests** passaient, `check` ne relevait aucun problème et `makemigrations --check --dry-run` ne détectait pas de changement de modèle manquant. Le test de routage couvre les 76 routes nommées et l’entrée de l’administration.
+Au dernier contrôle, les **71 tests** passaient, `check` ne relevait aucun problème et `makemigrations --check --dry-run` ne détectait pas de changement de modèle manquant. Le test de routage couvre les 88 routes nommées et l’entrée de l’administration.
 
 Exécuter les tests sur une base de test jetable, en CI ou en préproduction. **Ne pas utiliser les identifiants de la base réelle de production pour la suite de tests** : Django crée et détruit une base de test.
 

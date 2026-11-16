@@ -1,0 +1,31 @@
+{% extends 'dunia_app/base.html' %}
+
+{% block title %}Suivi d’aide financière · Dunia{% endblock %}
+
+{% block content %}
+<main class="mx-auto max-w-5xl px-3 py-5 pb-16 sm:px-5">
+  <a href="{% url 'home_b' %}" class="mb-3 inline-flex min-h-9 items-center gap-2 text-sm font-semibold text-primary hover:underline"><span aria-hidden="true">←</span> Catalogue des formations</a>
+  <header class="rounded-2xl bg-linear-to-br from-blue-950 via-primary to-cyan-600 p-5 text-primary-content shadow-sm sm:p-6"><h1 class="text-2xl font-extrabold tracking-tight sm:text-3xl">Suivre ma demande d’aide</h1><p class="mt-2 max-w-2xl text-sm text-white/80">Utilisez la référence reçue et l’adresse e-mail indiquée dans votre demande.</p></header>
+  <div class="mt-3 grid items-start gap-3 {% if demande %}lg:grid-cols-[minmax(17rem,.75fr)_minmax(0,1.25fr)]{% else %}lg:grid-cols-[minmax(0,1fr)_minmax(16rem,.7fr)]{% endif %}">
+    <section class="rounded-xl border border-base-300 bg-base-100 p-4 shadow-sm sm:p-5">
+      <h2 class="text-lg font-bold">Vos identifiants de suivi</h2>
+      {% if form.non_field_errors %}<div class="alert alert-error mt-3 text-sm">{{ form.non_field_errors }}</div>{% endif %}
+      <form method="post" class="mt-3 space-y-3">{% csrf_token %}
+        {% for field in form %}<label class="form-control gap-1"><span class="label-text font-semibold">{{ field.label }}</span>{{ field }}{% for error in field.errors %}<span class="text-sm text-error">{{ error }}</span>{% endfor %}</label>{% endfor %}
+        <button class="btn btn-primary w-full rounded-lg" type="submit">Consulter ma demande</button>
+      </form>
+      <p class="mt-3 text-xs leading-5 text-base-content/55">La référence figure sur la confirmation affichée après l’envoi. Gardez-la privée.</p>
+    </section>
+    {% if demande %}
+    <section class="rounded-xl border border-base-300 bg-base-100 p-4 shadow-sm sm:p-5" aria-labelledby="demande-aide-titre">
+      <div class="flex flex-wrap items-start justify-between gap-3"><div><h2 id="demande-aide-titre" class="text-lg font-bold">{{ demande.formation.titre }}</h2><p class="mt-1 text-xs text-base-content/60">Demande envoyée le {{ demande.date_creation|date:'d/m/Y' }}</p></div><span class="badge badge-primary badge-lg">{{ demande.get_statut_display }}</span></div>
+      <p class="mt-3 break-all font-mono text-xs text-base-content/55">Référence {{ demande.reference }}</p>
+      {% if action_suivante %}<div class="mt-3 rounded-lg border border-info/20 bg-info/5 p-3"><p class="text-sm leading-5">{{ action_suivante }}</p></div>{% endif %}
+      <a href="{% url 'info_detail' demande.formation.slug %}" class="btn btn-outline btn-sm mt-3 rounded-lg">Consulter la formation</a>
+    </section>
+    {% else %}
+    <aside class="rounded-xl border border-base-300 bg-base-100 p-4 shadow-sm sm:p-5"><h2 class="text-base font-bold">Un suivi confidentiel</h2><p class="mt-1 text-sm leading-5 text-base-content/65">La référence et l’adresse e-mail doivent toutes deux correspondre. L’état affiché est mis à jour par l’équipe Dunia.</p></aside>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}

@@ -3,6 +3,7 @@ from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm, Set
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.validators import FileExtensionValidator
+from django.db.models import Q
 from django.utils import timezone
 from .models import (
     CANDIDATURE_STATUTS,
@@ -16,12 +17,15 @@ from .models import (
     CourseEvaluation,
     DemandeAideFinanciere,
     Contact,
+    Friendship,
     Information,
     JobApplication,
     JobPosting,
+    LearningGoal,
     Message,
     LearnerProjectRequest,
     ProjectSubmission,
+    ProjectCollaborator,
     SocialPost,
     SessionReservation,
     Cours,
@@ -137,6 +141,12 @@ class ApplicationTrackingForm(forms.Form):
     }))
     email = forms.EmailField(label='Adresse e-mail utilisée', widget=forms.EmailInput(attrs={
         'class': INPUT_CLASS, 'placeholder': 'vous@exemple.com',
+    }))
+
+
+class FinancialAidTrackingForm(ApplicationTrackingForm):
+    reference = forms.UUIDField(label='Référence de demande d’aide financière', widget=forms.TextInput(attrs={
+        'class': INPUT_CLASS, 'placeholder': 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
     }))
 
 
@@ -262,12 +272,6 @@ class UserProfileForm(forms.ModelForm):
             'photo': 'Photo de profil', 'linkedin': 'LinkedIn', 'github': 'GitHub',
             'portfolio': 'Portfolio', 'visible': 'Afficher mon profil dans la communauté',
         }
-
-    def clean_photo(self):
-        photo = self.cleaned_data.get('photo')
-        if photo and photo.size > 5 * 1024 * 1024:
-            raise forms.ValidationError('La photo de profil ne peut dépasser 5 Mo.')
-        return photo
         widgets = {
             'bio': forms.Textarea(attrs={'class': TEXTAREA_CLASS, 'rows': 4}),
             'telephone': forms.TelInput(attrs={'class': INPUT_CLASS}),
@@ -277,6 +281,12 @@ class UserProfileForm(forms.ModelForm):
             'github': forms.URLInput(attrs={'class': INPUT_CLASS}),
             'portfolio': forms.URLInput(attrs={'class': INPUT_CLASS}),
         }
+
+    def clean_photo(self):
+        photo = self.cleaned_data.get('photo')
+        if photo and photo.size > 5 * 1024 * 1024:
+            raise forms.ValidationError('La photo de profil ne peut dépasser 5 Mo.')
+        return photo
 
 
 class AccountNameForm(forms.ModelForm):
@@ -436,6 +446,14 @@ class CourseManagementForm(forms.ModelForm):
 
 
 class ProjectSubmissionForm(forms.ModelForm):
+    collaborateurs = forms.ModelMultipleChoiceField(
+        queryset=User.objects.none(),
+        required=False,
+        label='Inviter des coéquipiers',
+        help_text='Choisissez jusqu’à 8 amis Dunia. Ils devront accepter l’invitation avant d’apparaître comme collaborateurs.',
+        widget=forms.SelectMultiple(attrs={'class': 'select select-bordered min-h-32 w-full'}),
+    )
+
     class Meta:
         model = ProjectSubmission
         fields = ['formation', 'titre', 'description', 'competences', 'url_demo', 'url_code', 'image']
@@ -458,6 +476,72 @@ class ProjectSubmissionForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['formation'].queryset = Information.objects.filter(status=1)
         self.fields['formation'].required = False
+        if self.instance.pk:
+            self.fields.pop('collaborateurs')
+        else:
+            self.fields['collaborateurs'].queryset = _accepted_friends(auteur)
+
+    def clean_collaborateurs(self):
+        collaborateurs = self.cleaned_data.get('collaborateurs')
+        if collaborateurs and collaborateurs.count() > 8:
+            raise forms.ValidationError('Un projet peut inviter au maximum 8 coéquipiers.')
+        return collaborateurs
+
+
+class ProjectCollaboratorInviteForm(forms.Form):
+    collaborateurs = forms.ModelMultipleChoiceField(
+        queryset=User.objects.none(),
+        required=True,
+        label='Inviter des amis',
+        widget=forms.SelectMultiple(attrs={'class': 'select select-bordered min-h-24 w-full'}),
+    )
+
+    def __init__(self, *args, user=None, project=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        amis = _accepted_friends(user)
+        if project:
+            deja_invites = project.collaborations.filter(
+                statut__in=['en_attente', 'acceptee'],
+            ).values_list('utilisateur_id', flat=True)
+            amis = amis.exclude(pk__in=deja_invites)
+        self.fields['collaborateurs'].queryset = amis
+
+    def clean_collaborateurs(self):
+        collaborateurs = self.cleaned_data.get('collaborateurs')
+        if collaborateurs and collaborateurs.count() > 8:
+            raise forms.ValidationError('Vous pouvez inviter au maximum 8 personnes à la fois.')
+        return collaborateurs
+
+
+def _accepted_friends(user):
+    if not user or not user.is_authenticated:
+        return User.objects.none()
+    return User.objects.filter(is_active=True).filter(
+        Q(friendships_as_one__person_two=user, friendships_as_one__status=Friendship.ACCEPTED)
+        | Q(friendships_as_two__person_one=user, friendships_as_two__status=Friendship.ACCEPTED)
+    ).exclude(pk=user.pk).distinct().order_by('first_name', 'last_name', 'username')
+
+
+class LearningGoalForm(forms.ModelForm):
+    class Meta:
+        model = LearningGoal
+        fields = ['titre', 'description', 'date_cible']
+        labels = {
+            'titre': 'Mon objectif',
+            'description': 'Comment vais-je y parvenir ?',
+            'date_cible': 'Date cible (facultative)',
+        }
+        widgets = {
+            'titre': forms.TextInput(attrs={'class': INPUT_CLASS, 'placeholder': 'Ex. terminer mon cours de Python'}),
+            'description': forms.TextInput(attrs={'class': INPUT_CLASS, 'placeholder': 'Une prochaine étape concrète'}),
+            'date_cible': forms.DateInput(attrs={'class': INPUT_CLASS, 'type': 'date'}),
+        }
+
+    def clean_date_cible(self):
+        date_cible = self.cleaned_data.get('date_cible')
+        if date_cible and date_cible < timezone.localdate():
+            raise forms.ValidationError('La date cible ne peut pas être dans le passé.')
+        return date_cible
 
 
 class CommunityPostForm(forms.ModelForm):

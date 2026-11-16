@@ -56,7 +56,7 @@ python manage.py makemigrations --check --dry-run
 python manage.py check --deploy
 ```
 
-La suite teste également la résolution et l’accès GET sans erreur serveur des 76 routes applicatives nommées, ainsi que l’entrée et la connexion de l’administration Django; les codes `302`, `403`, `404` ou `405` restent normaux pour une page protégée, une ressource absente ou une méthode non autorisée. Exécuter `check --deploy` et `collectstatic` avec la configuration de production, puis tester en préproduction les parcours avec des données représentatives, l’envoi des courriels et les accès de chaque rôle.
+La suite teste également la résolution et l’accès GET sans erreur serveur des 82 routes applicatives nommées, ainsi que l’entrée et la connexion de l’administration Django; les codes `302`, `403`, `404` ou `405` restent normaux pour une page protégée, une ressource absente ou une méthode non autorisée. Exécuter `check --deploy` et `collectstatic` avec la configuration de production, puis tester en préproduction les parcours avec des données représentatives, l’envoi des courriels et les accès de chaque rôle.
 
 ## Mise en production des pièces privées
 
@@ -74,6 +74,8 @@ Avant le déploiement, pendant une fenêtre de maintenance :
 La migration 0027 reprend les cours déjà publiés, crée les demandes de rôle nécessaires aux formateurs actifs et entreprises déjà vérifiées, conserve les références et travaux historiques de défis, et marque comme retenues les places des admissions déjà confirmées sans modifier les compteurs existants. Elle s’arrête si les dates/capacités existantes violent les nouvelles contraintes; corriger alors les lignes concernées explicitement après analyse, sans ajustement automatique des places.
 
 La migration 0028 ajoute des limites de taille aux images et fichiers téléversés, ainsi qu’une vérification d’extension et de signature pour les brochures et rapports PDF. Elle ne modifie ni ne supprime les médias historiques; les formulaires rejettent les nouveaux fichiers qui ne respectent pas ces règles.
+
+La migration 0029 ajoute une référence UUID unique à chaque demande d’aide financière existante, crée les demandes d’accès aux communautés privées et ajoute l’état d’annulation aux inscriptions événementielles. La référence est ajoutée temporairement comme nullable, remplie avec une UUID distincte par ligne, puis rendue unique et obligatoire. Vérifier la sauvegarde et le plan de migration sur une copie de la base avant production.
 
 ## Contrôles de déploiement
 

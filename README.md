@@ -1,6 +1,6 @@
 # Dunia — Guide technique
 
-> Documentation d’accueil destinée aux personnes qui développent et maintiennent la plateforme. État vérifié dans le workspace le 13 novembre 2026; revoir les sections « Migrations » et « Tests » lorsque le projet évolue.
+> Documentation d’accueil destinée aux personnes qui développent et maintiennent la plateforme. État vérifié dans le workspace le 16 novembre 2026; revoir les sections « Migrations » et « Tests » lorsque le projet évolue.
 
 **[Lire le guide complet du projet](GUIDE_PROJET.md)** — fonctionnalités déjà livrées, limites connues, travaux restants et procédure de mise en production.
 
@@ -17,6 +17,7 @@ L’application est un monolithe Django rendu côté serveur : les vues reçoive
 - Templates Django, formulaires HTML et quelques interactions JavaScript.
 - Tailwind CSS 4, DaisyUI 5 et Node.js/npm pour la compilation CSS.
 - Pillow pour le traitement des images.
+- ReportLab pour générer les certificats PDF des apprenants.
 
 ## 2. Architecture du dépôt
 
@@ -65,25 +66,25 @@ flowchart LR
 - Profils d’apprenants, profils formateurs et profils d’entreprise.
 - Demandes d’amitié, fil social, publications, réactions, commentaires et partages.
 - Messagerie directe, états de lecture et notifications.
-- Communautés avec adhésion et publications réservées aux membres lorsque nécessaire.
+- Communautés publiques et privées avec demande d’accès, approbation par l’équipe et publications réservées aux membres.
 
 ### Formation et apprentissage
 
 - Catalogue de formations, filtres, orientation, pages détaillées, FAQ et calendrier des sessions.
-- Candidatures avec référence de suivi, demandes d’aide financière et réservations de sessions d’information.
-- Cours vidéo, audio ou PDF, suivi de progression et évaluations.
+- Candidatures et demandes d’aide financière avec suivi par référence et e-mail; réservations de sessions d’information.
+- Cours vidéo, audio ou PDF, suivi de progression, objectifs personnels modifiables et certificats PDF vérifiables.
 - Espace formateur pour soumettre et modifier des cours.
 
 ### Entreprises, emploi et projets
 
 - Profils d’entreprise, offres d’emploi, candidatures et consultation des dossiers par l’entreprise autorisée.
-- Galerie de projets d’apprenants et formulaire de demande de projet client.
+- Galerie de projets d’apprenants, dépôt individuel ou en équipe avec invitations acceptées par les coéquipiers, et formulaire de demande de projet client. Toute modification d’un projet publié repasse en validation.
 - Les offres et les candidatures sont exposées selon le statut de publication et les droits du propriétaire.
 
 ### Défis, événements et contenu
 
 - Défis gratuits ou payants, déclaration manuelle du paiement, remises de travail versionnées et retours d’évaluation.
-- Événements professionnels avec inscriptions et capacité.
+- Événements professionnels avec inscriptions, capacité, affichage de l’état et annulation avant le début.
 - Publications éditoriales, articles et catégories, initiatives, campus, indicateurs d’impact, partenaires, témoignages, certifications et rapports annuels.
 - Une partie des contenus de gestion (par exemple les indicateurs, certificats et rapports) est maintenue depuis l’administration Django.
 
@@ -110,8 +111,8 @@ Les fonctions correspondantes sont principalement dans [dunia_app/services.py](d
 | --- | --- |
 | Accueil et contenu | `/`, `/publication/<slug>/`, `/articles/`, `/articles/<slug>/` |
 | Authentification | `/inscription/`, `/connexion/`, `/mot-de-passe/oublie/` |
-| Formations | `/formations/`, `/formation/<slug>/`, `/orientation/`, `/calendrier/`, `/formation/<slug>/candidature/` |
-| Apprentissage | `/cours/`, `/cours/<slug>/`, `/mon-espace/formateur/cours/` |
+| Formations | `/formations/`, `/formation/<slug>/`, `/orientation/`, `/calendrier/`, `/formation/<slug>/candidature/`, `/aide-financiere/suivi/` |
+| Apprentissage | `/cours/`, `/cours/<slug>/`, `/certificats/`, `/certificats/verifier/<uuid>/`, `/mon-espace/formateur/cours/` |
 | Réseau social | `/fil/...`, `/amis/`, `/messagerie/` |
 | Entreprises et emploi | `/entreprises/`, `/emplois/`, `/emplois/<slug>/` |
 | Projets et communautés | `/projets/`, `/communautes/`, `/communautes/<slug>/` |
@@ -223,18 +224,15 @@ Pour les variables exactes, les étapes de build, la configuration du proxy et l
 
 ## 9. Migrations et état de la base locale
 
-Les migrations 0001 à 0026 sont appliquées sur la base locale contrôlée. Les migrations suivantes existent mais étaient en attente dans cette base au 12 novembre 2026 :
+La base SQLite locale contrôlée applique désormais les migrations **0001 à 0030**. La migration **0030** ajoute les objectifs personnels, les invitations de collaboration sur projets et le type de notification associé.
 
-- **0027** — workflows, audit, contraintes et stockage des pièces de candidature; comprend des vérifications et une reprise de données historiques.
-- **0028** — validation de taille des médias et vérification des brochures/rapports PDF.
+La migration 0027 comprend une reprise de données et de nouvelles contraintes; la 0028 ajoute des validations aux fichiers téléversés; la 0029 reprend les références historiques d’aide financière; la 0030 ajoute des tables sans supprimer de données. Les migrations locales ont été appliquées après sauvegarde. Sur les autres bases déjà peuplées, faire une sauvegarde et suivre [DEPLOIEMENT_SECURISE.md](DEPLOIEMENT_SECURISE.md).
 
-Les tests créent leur propre base temporaire et appliquent la chaîne complète. La base réelle du workspace n’a pas été modifiée pendant cet audit.
-
-Sur une base fraîche de développement, appliquer les migrations est l’étape normale d’initialisation. Sur une base qui contient déjà des données, ne pas appliquer 0027 sans sauvegarde et analyse préalable : consulter [DEPLOIEMENT_SECURISE.md](DEPLOIEMENT_SECURISE.md), exécuter d’abord les contrôles prévus et vérifier le plan de restauration. La commande de déplacement des documents privés est distincte de la migration de schéma.
+Avant toute migration sur une base déjà peuplée, faire une sauvegarde et suivre [DEPLOIEMENT_SECURISE.md](DEPLOIEMENT_SECURISE.md). La commande de déplacement des documents privés est distincte de la migration de schéma.
 
 ## 10. Tests et contribution
 
-Au moment de la rédaction, **60 tests Django passent**. Ils couvrent notamment les parcours de formation, les statuts de cours/offres/candidatures, les capacités de cohorte, les paiements/remises de défi, les permissions de téléchargement privé, le throttling, les templates, la reprise de données de migration et le smoke test des routes nommées et de l’administration.
+Au moment de la rédaction, **71 tests Django passent**. Ils couvrent notamment les parcours de formation et d’aide, les accès privés aux communautés, les invitations et contributions aux projets d’équipe, les objectifs personnels, les événements, les certificats PDF, les workflows, les migrations de données et le smoke test des routes nommées et de l’administration.
 
 Avant de proposer une modification :
 

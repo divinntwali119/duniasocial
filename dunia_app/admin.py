@@ -10,6 +10,7 @@ from .models import (
     Candidature,
     Comment,
     Conversation,
+    CommunityAccessRequest,
     Community,
     CommunityMembership,
     CommunityPost,
@@ -34,6 +35,7 @@ from .models import (
     Publication,
     ProfessionalEvent,
     ProjectSubmission,
+    ProjectCollaborator,
     RoleRequest,
     Information,
     Cours,
@@ -62,6 +64,7 @@ from .services import (
     set_job_posting_status,
     transition_job_application,
     transition_candidature,
+    review_community_access_request,
 )
 
 
@@ -619,6 +622,17 @@ class JobApplicationAdmin(admin.ModelAdmin):
         return False
 
 
+class ProjectCollaboratorInline(admin.TabularInline):
+    model = ProjectCollaborator
+    extra = 0
+    can_delete = False
+    fields = ('utilisateur', 'invite_par', 'statut', 'date_invitation', 'date_decision')
+    readonly_fields = fields
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
 @admin.register(ProjectSubmission)
 class ProjectSubmissionAdmin(admin.ModelAdmin):
     list_display = ('titre', 'auteur', 'formation', 'statut', 'date_creation')
@@ -626,6 +640,7 @@ class ProjectSubmissionAdmin(admin.ModelAdmin):
     search_fields = ('titre', 'description', 'auteur__username')
     autocomplete_fields = ('auteur', 'formation')
     prepopulated_fields = {'slug': ('titre',)}
+    inlines = [ProjectCollaboratorInline]
 
 
 @admin.register(Community)
@@ -644,6 +659,37 @@ class CommunityMembershipAdmin(admin.ModelAdmin):
     search_fields = ('user__username', 'community__nom')
     autocomplete_fields = ('user', 'community')
     readonly_fields = ('date_adhesion',)
+
+
+@admin.register(CommunityAccessRequest)
+class CommunityAccessRequestAdmin(admin.ModelAdmin):
+    list_display = ('communaute', 'utilisateur', 'statut', 'date_creation', 'date_revue', 'revue_par')
+    list_filter = ('statut', 'communaute', 'date_creation')
+    search_fields = ('communaute__nom', 'utilisateur__username', 'utilisateur__email')
+    autocomplete_fields = ('communaute', 'utilisateur', 'revue_par')
+    readonly_fields = ('communaute', 'utilisateur', 'statut', 'date_creation', 'date_modification', 'date_revue', 'revue_par')
+    actions = ('approuver_demandes', 'refuser_demandes')
+
+    @admin.action(description='Approuver les demandes d’accès sélectionnées')
+    def approuver_demandes(self, request, queryset):
+        self._traiter_demandes(request, queryset, 'approuvee')
+
+    @admin.action(description='Refuser les demandes d’accès sélectionnées')
+    def refuser_demandes(self, request, queryset):
+        self._traiter_demandes(request, queryset, 'refusee')
+
+    def _traiter_demandes(self, request, queryset, statut):
+        for demande in queryset:
+            try:
+                review_community_access_request(demande.pk, statut=statut, actor=request.user)
+            except (PermissionDenied, ValidationError) as error:
+                self.message_user(request, f'{demande}: {error}', level='ERROR')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(CommunityPost)

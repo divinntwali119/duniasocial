@@ -83,6 +83,11 @@ STATUTS_AIDE = (
     ('recontact', 'À recontacter'),
     ('cloturee', 'Clôturée'),
 )
+COMMUNITY_ACCESS_STATUSES = (
+    ('en_attente', 'En attente'),
+    ('approuvee', 'Approuvée'),
+    ('refusee', 'Refusée'),
+)
 PROFIL_ROLES = (
     ('apprenant', 'Apprenant'),
     ('formateur', 'Formateur'),
@@ -108,11 +113,20 @@ CANDIDATURE_EMPLOI_STATUTS = (
     ('retenue', 'Retenue'),
     ('refusee', 'Non retenue'),
 )
+LEARNING_GOAL_STATUSES = (
+    ('en_cours', 'En cours'),
+    ('atteint', 'Atteint'),
+)
 PROJET_STATUTS = (
     ('brouillon', 'Brouillon'),
     ('a_valider', 'À valider'),
     ('publie', 'Publié'),
     ('refuse', 'À corriger'),
+)
+PROJECT_COLLABORATION_STATUSES = (
+    ('en_attente', 'Invitation en attente'),
+    ('acceptee', 'Acceptée'),
+    ('refusee', 'Refusée'),
 )
 NOTIFICATION_TYPES = (
     ('message', 'Message'),
@@ -121,6 +135,7 @@ NOTIFICATION_TYPES = (
     ('communaute', 'Communauté'),
     ('cours', 'Cours'),
     ('evenement', 'Événement'),
+    ('projet', 'Projet collaboratif'),
     ('systeme', 'Information Dunia'),
 )
 
@@ -448,6 +463,7 @@ class Candidature(models.Model):
 
 class DemandeAideFinanciere(models.Model):
     formation = models.ForeignKey(Information, on_delete=models.PROTECT, related_name='demandes_aide')
+    reference = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     nom = models.CharField(max_length=100)
     prenom = models.CharField(max_length=100)
     email = models.EmailField()
@@ -769,6 +785,23 @@ class LearningProgress(models.Model):
         return f"{self.user} — {self.cours} ({etat})"
 
 
+class LearningGoal(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='objectifs_apprentissage')
+    titre = models.CharField(max_length=140)
+    description = models.CharField(max_length=500, blank=True)
+    date_cible = models.DateField(blank=True, null=True)
+    statut = models.CharField(max_length=16, choices=LEARNING_GOAL_STATUSES, default='en_cours')
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+    date_atteinte = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['statut', 'date_cible', '-date_creation']
+
+    def __str__(self):
+        return f"{self.user} — {self.titre}"
+
+
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profil_dunia')
     role = models.CharField(max_length=20, choices=PROFIL_ROLES, default='apprenant')
@@ -991,6 +1024,24 @@ class ProjectSubmission(models.Model):
         return self.titre
 
 
+class ProjectCollaborator(models.Model):
+    projet = models.ForeignKey(ProjectSubmission, on_delete=models.CASCADE, related_name='collaborations')
+    utilisateur = models.ForeignKey(User, on_delete=models.CASCADE, related_name='invitations_projet')
+    invite_par = models.ForeignKey(User, on_delete=models.CASCADE, related_name='invitations_projet_envoyees')
+    statut = models.CharField(max_length=16, choices=PROJECT_COLLABORATION_STATUSES, default='en_attente')
+    date_invitation = models.DateTimeField(auto_now_add=True)
+    date_decision = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-date_invitation']
+        constraints = [
+            models.UniqueConstraint(fields=['projet', 'utilisateur'], name='unique_project_collaborator')
+        ]
+
+    def __str__(self):
+        return f"{self.utilisateur} — {self.projet} ({self.get_statut_display()})"
+
+
 class Community(models.Model):
     nom = models.CharField(max_length=120)
     slug = models.SlugField(unique=True, blank=True)
@@ -1024,6 +1075,31 @@ class CommunityMembership(models.Model):
 
     def __str__(self):
         return f"{self.user} — {self.community}"
+
+
+class CommunityAccessRequest(models.Model):
+    communaute = models.ForeignKey(Community, on_delete=models.CASCADE, related_name='demandes_acces')
+    utilisateur = models.ForeignKey(User, on_delete=models.CASCADE, related_name='demandes_acces_communaute')
+    statut = models.CharField(max_length=20, choices=COMMUNITY_ACCESS_STATUSES, default='en_attente')
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+    date_revue = models.DateTimeField(blank=True, null=True)
+    revue_par = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name='demandes_acces_communaute_revuees',
+        blank=True,
+        null=True,
+    )
+
+    class Meta:
+        ordering = ['-date_creation']
+        constraints = [
+            models.UniqueConstraint(fields=['communaute', 'utilisateur'], name='unique_community_access_request')
+        ]
+
+    def __str__(self):
+        return f"{self.utilisateur} — {self.communaute} ({self.get_statut_display()})"
 
 
 class CommunityPost(models.Model):
@@ -1103,6 +1179,7 @@ class EventRegistration(models.Model):
     evenement = models.ForeignKey(ProfessionalEvent, on_delete=models.CASCADE, related_name='inscriptions')
     participant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='inscriptions_evenement')
     date_inscription = models.DateTimeField(auto_now_add=True)
+    annulee_le = models.DateTimeField(blank=True, null=True)
     status = models.IntegerField(choices=STATUS, default=1)
 
     class Meta:

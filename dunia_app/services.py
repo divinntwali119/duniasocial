@@ -14,14 +14,21 @@ from .models import (
     ChallengeWorkSubmission,
     BusinessProfile,
     Candidature,
+    CommunityAccessRequest,
+    CommunityMembership,
     Cours,
+    Friendship,
     JobApplication,
     JobPosting,
     RoleRequest,
     TrainerProfile,
     TrainingSession,
     AuditLog,
+    Notification,
+    ProjectCollaborator,
+    ProjectSubmission,
 )
+from django.urls import reverse
 
 
 _TERMINAL_CANDIDATURE_STATUTS = {'confirmee', 'refusee'}
@@ -130,6 +137,133 @@ def review_role_request(demande_id, *, statut, actor, commentaire=''):
         'commentaire': demande.commentaire,
     })
     return demande
+
+
+@transaction.atomic
+def review_community_access_request(demande_id, *, statut, actor):
+    if not _actor_can_manage(actor, 'dunia_app.change_communityaccessrequest'):
+        raise PermissionDenied('Seul un membre autorisé de l’équipe peut traiter cette demande.')
+    if statut not in {'approuvee', 'refusee'}:
+        raise ValidationError('Décision d’accès invalide.')
+
+    demande = CommunityAccessRequest.objects.select_for_update().select_related(
+        'communaute', 'utilisateur'
+    ).get(pk=demande_id)
+    if demande.statut == statut:
+        return demande
+    if demande.statut != 'en_attente':
+        raise ValidationError('Cette demande a déjà été traitée.')
+
+    demande.statut = statut
+    demande.revue_par = actor
+    demande.date_revue = timezone.now()
+    demande.save(update_fields=['statut', 'revue_par', 'date_revue', 'date_modification'])
+
+    if statut == 'approuvee':
+        CommunityMembership.objects.get_or_create(
+            community=demande.communaute,
+            user=demande.utilisateur,
+        )
+
+    decision = 'acceptée' if statut == 'approuvee' else 'refusée'
+    Notification.objects.create(
+        destinataire=demande.utilisateur,
+        type_notification='communaute',
+        titre='Demande d’accès traitée',
+        message=f"Votre demande pour {demande.communaute.nom} a été {decision}.",
+        url=reverse('communaute_detail', args=[demande.communaute.slug]),
+    )
+    record_audit(actor, demande, 'communaute.demande_acces_traitee', {
+        'statut': statut,
+        'communaute_id': demande.communaute_id,
+        'utilisateur_id': demande.utilisateur_id,
+    })
+    return demande
+
+
+@transaction.atomic
+def invite_project_collaborators(project_id, users, *, actor):
+    if not actor or not actor.is_authenticated:
+        raise PermissionDenied('Connectez-vous pour inviter des coéquipiers.')
+    project = ProjectSubmission.objects.select_for_update().get(pk=project_id, auteur=actor)
+    users = list(users)
+    if len(users) > 8:
+        raise ValidationError('Un projet peut inviter au maximum 8 coéquipiers à la fois.')
+    invitations_creees = 0
+    for user in users:
+        if user.pk == actor.pk:
+            raise ValidationError('Vous ne pouvez pas vous inviter vous-même.')
+        if not user.is_active or not Friendship.objects.filter(
+            status=Friendship.ACCEPTED,
+        ).filter(
+            Q(person_one=actor, person_two=user) | Q(person_one=user, person_two=actor)
+        ).exists():
+            raise ValidationError('Vous ne pouvez inviter que des amis Dunia actifs.')
+        invitation = ProjectCollaborator.objects.select_for_update().filter(
+            projet=project,
+            utilisateur=user,
+        ).first()
+        if invitation and invitation.statut == 'acceptee':
+            continue
+        if invitation and invitation.statut == 'en_attente':
+            continue
+        if invitation:
+            invitation.statut = 'en_attente'
+            invitation.invite_par = actor
+            invitation.date_invitation = timezone.now()
+            invitation.date_decision = None
+            invitation.save(update_fields=['statut', 'invite_par', 'date_invitation', 'date_decision'])
+        else:
+            invitation = ProjectCollaborator.objects.create(
+                projet=project,
+                utilisateur=user,
+                invite_par=actor,
+            )
+        Notification.objects.create(
+            destinataire=user,
+            type_notification='projet',
+            titre='Invitation à collaborer',
+            message=f"{actor.get_full_name() or actor.get_username()} vous invite à collaborer sur « {project.titre} ».",
+            url=f"{reverse('tableau_bord')}#projets",
+        )
+        record_audit(actor, invitation, 'projet.collaborateur_invite', {
+            'projet_id': project.pk,
+            'utilisateur_id': user.pk,
+        })
+        invitations_creees += 1
+    return invitations_creees
+
+
+@transaction.atomic
+def respond_to_project_invitation(invitation_id, *, statut, actor):
+    if not actor or not actor.is_authenticated:
+        raise PermissionDenied('Connectez-vous pour répondre à cette invitation.')
+    if statut not in {'acceptee', 'refusee'}:
+        raise ValidationError('Réponse à l’invitation invalide.')
+    invitation = ProjectCollaborator.objects.select_for_update().select_related(
+        'projet', 'projet__auteur', 'utilisateur'
+    ).filter(pk=invitation_id, utilisateur=actor).first()
+    if not invitation:
+        raise PermissionDenied('Cette invitation ne vous appartient pas.')
+    if invitation.statut != 'en_attente':
+        raise ValidationError('Cette invitation a déjà été traitée.')
+    invitation.statut = statut
+    invitation.date_decision = timezone.now()
+    invitation.save(update_fields=['statut', 'date_decision'])
+
+    libelle = 'acceptée' if statut == 'acceptee' else 'refusée'
+    Notification.objects.create(
+        destinataire=invitation.projet.auteur,
+        type_notification='projet',
+        titre='Réponse à une invitation de projet',
+        message=f"{actor.get_full_name() or actor.get_username()} a {libelle} l’invitation pour « {invitation.projet.titre} ».",
+        url=f"{reverse('tableau_bord')}#projets",
+    )
+    record_audit(actor, invitation, 'projet.invitation_repondue', {
+        'projet_id': invitation.projet_id,
+        'statut': statut,
+    })
+    return invitation
 
 
 @transaction.atomic

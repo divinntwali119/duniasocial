@@ -1,5 +1,6 @@
 from datetime import timedelta
 from pathlib import Path
+import uuid
 import tempfile
 from types import SimpleNamespace
 
@@ -32,6 +33,7 @@ from .models import (
 	Conversation,
 		Contact,
 	Credential,
+		CommunityAccessRequest,
 	DemandeAideFinanciere,
 	EventRegistration,
 	FeedComment,
@@ -43,12 +45,14 @@ from .models import (
 	JobApplication,
 	JobPosting,
 	LearningProgress,
+	LearningGoal,
 	Message,
 	Notification,
 	ProfessionalEvent,
 	Publication,
 	RoleRequest,
 	ProjectSubmission,
+	ProjectCollaborator,
 	SessionReservation,
 	SocialPost,
 	TrainerProfile,
@@ -72,7 +76,11 @@ from .services import (
 	transition_job_application,
 	transition_candidature,
 	update_business_profile,
+	review_community_access_request,
+	invite_project_collaborators,
+	respond_to_project_invitation,
 )
+from .forms import UserProfileForm
 
 
 class FormationFeaturesTests(TestCase):
@@ -275,7 +283,59 @@ class FormationFeaturesTests(TestCase):
 		})
 
 		self.assertEqual(response.status_code, 302)
-		self.assertEqual(DemandeAideFinanciere.objects.count(), 1)
+		demande = DemandeAideFinanciere.objects.get()
+		self.assertEqual(response.url, reverse('aide_financiere_confirmation', args=[demande.reference]))
+		confirmation = self.client.get(response.url)
+		self.assertEqual(confirmation.status_code, 200)
+		self.assertContains(confirmation, str(demande.reference))
+
+		suivi_url = reverse('aide_financiere_suivi')
+		suivi = self.client.post(suivi_url, {
+			'reference': str(demande.reference),
+			'email': 'awa@example.com',
+		})
+		self.assertEqual(suivi.status_code, 200)
+		self.assertEqual(suivi.context['demande'], demande)
+		self.assertContains(suivi, 'Demande reçue')
+
+		demande.statut = 'etude'
+		demande.save(update_fields=['statut'])
+		suivi = self.client.post(suivi_url, {
+			'reference': str(demande.reference),
+			'email': 'autre@example.com',
+		})
+		self.assertIsNone(suivi.context['demande'])
+		self.assertContains(suivi, 'Aucune demande ne correspond')
+
+		suivi = self.client.post(suivi_url, {
+			'reference': str(demande.reference),
+			'email': 'awa@example.com',
+		})
+		self.assertContains(suivi, 'À l’étude')
+
+	def test_aid_tracking_requires_matching_reference_and_email(self):
+		first = DemandeAideFinanciere.objects.create(
+			formation=self.formation,
+			nom='Diallo',
+			prenom='Awa',
+			email='awa@example.com',
+			telephone='+22501020304',
+			situation='Situation de test.',
+		)
+		second = DemandeAideFinanciere.objects.create(
+			formation=self.formation,
+			nom='Kone',
+			prenom='Mariam',
+			email='mariam@example.com',
+			telephone='+22505060708',
+			situation='Autre situation de test.',
+		)
+		response = self.client.post(reverse('aide_financiere_suivi'), {
+			'reference': str(first.reference),
+			'email': second.email,
+		})
+		self.assertIsNone(response.context['demande'])
+		self.assertNotContains(response, second.prenom)
 
 
 class PlatformFeaturesTests(TestCase):
@@ -343,8 +403,8 @@ class PlatformFeaturesTests(TestCase):
 		self.assertContains(response, 'Équipe')
 		self.assertContains(response, 'Certifs')
 		self.assertContains(response, f'href="{reverse("challenge_list")}"')
-		self.assertContains(response, 'aria-label="Équipe pédagogique, bientôt disponible"')
-		self.assertContains(response, 'aria-label="Certifications, bientôt disponibles"')
+		self.assertContains(response, f'href="{reverse("formateurs")}"')
+		self.assertContains(response, f'href="{reverse("credential_list")}"')
 		self.assertContains(response, 'Fil d’actualité')
 		self.assertContains(response, 'aria-label="Navigation principale"')
 		self.assertContains(response, 'aria-label="Navigation principale mobile"')
@@ -547,7 +607,9 @@ class PlatformFeaturesTests(TestCase):
 			status=1,
 		)
 		progression = LearningProgress.objects.create(user=self.user, cours=self.cours, is_completed=True)
-		self.cours.certifications_requises.add(Credential.objects.create(nom='Badge Python', status=1))
+		credential = Credential.objects.create(nom='Badge Python', status=1)
+		self.cours.certifications_requises.add(credential)
+		attribution = UserCredential.objects.create(utilisateur=self.user, certification=credential)
 
 		paths = [
 			reverse('tableau_bord'),
@@ -558,6 +620,8 @@ class PlatformFeaturesTests(TestCase):
 			reverse('cours_list'),
 			reverse('cours_detail', args=[self.cours.slug]),
 			reverse('cours_evaluer', args=[self.cours.slug]),
+			reverse('credential_list'),
+			reverse('credential_verify', args=[attribution.reference]),
 			reverse('offres_emploi'),
 			reverse('offre_detail', args=[self.offre.slug]),
 			reverse('espace_entreprises'),
@@ -593,6 +657,7 @@ class PlatformFeaturesTests(TestCase):
 		self.assertContains(dashboard_response, 'bg-linear-to-br from-blue-950 via-primary to-cyan-600')
 		self.assertContains(dashboard_response, 'Mon apprentissage')
 		self.assertNotContains(dashboard_response, 'bg-gradient-to-br')
+		self.assertContains(dashboard_response, reverse('user_credential_download', args=[attribution.reference]))
 
 	def test_public_comment_is_moderated_and_redirects_to_safe_local_url(self):
 		publication = Publication.objects.create(
@@ -833,6 +898,70 @@ class PlatformFeaturesTests(TestCase):
 		self.assertTrue(LearningProgress.objects.get(user=self.user, cours=self.cours).is_completed)
 		self.assertTrue(UserCredential.objects.filter(utilisateur=self.user, certification=credential).exists())
 
+	def test_multi_course_credential_requires_every_prerequisite_course(self):
+		second_course = Cours.objects.create(
+			formateur=self.formateur,
+			titre='Accessibilité des interfaces',
+			description='Construire des interfaces accessibles.',
+			type_contenu='video',
+			status=1,
+		)
+		credential = Credential.objects.create(nom='Parcours web complet', status=1)
+		credential.cours.add(self.cours, second_course)
+		self.client.force_login(self.user)
+
+		for cours in (self.cours, second_course):
+			self.client.post(reverse('cours_demarrer', args=[cours.slug]))
+			self.client.post(reverse('cours_terminer', args=[cours.slug]))
+			if cours == self.cours:
+				self.assertFalse(UserCredential.objects.filter(utilisateur=self.user, certification=credential).exists())
+
+		self.assertTrue(UserCredential.objects.filter(utilisateur=self.user, certification=credential).exists())
+
+	def test_credentials_can_be_downloaded_and_verified_without_public_identity(self):
+		credential = Credential.objects.create(nom='Certificat Django', description='Certification de test.', status=1)
+		self.cours.certifications_requises.add(credential)
+		self.client.force_login(self.user)
+		self.client.post(reverse('cours_demarrer', args=[self.cours.slug]))
+		self.client.post(reverse('cours_terminer', args=[self.cours.slug]))
+		attribution = UserCredential.objects.get(utilisateur=self.user, certification=credential)
+
+		download = self.client.get(reverse('user_credential_download', args=[attribution.reference]))
+		self.assertEqual(download.status_code, 200)
+		self.assertEqual(download['Content-Type'], 'application/pdf')
+		self.assertIn('attachment;', download['Content-Disposition'])
+		pdf_content = b''.join(download.streaming_content)
+		self.assertTrue(pdf_content.startswith(b'%PDF-'))
+
+		self.client.logout()
+		verification = self.client.get(reverse('credential_verify', args=[attribution.reference]))
+		self.assertEqual(verification.status_code, 200)
+		self.assertContains(verification, credential.nom)
+		self.assertContains(verification, str(attribution.reference))
+		self.assertNotContains(verification, self.user.username)
+
+		autre = User.objects.create_user(username='autre-titulaire', password='Strong!Passphrase2026')
+		self.client.force_login(autre)
+		forbidden_download = self.client.get(reverse('user_credential_download', args=[attribution.reference]))
+		self.assertEqual(forbidden_download.status_code, 404)
+
+	def test_published_credential_catalog_is_available(self):
+		credential = Credential.objects.create(nom='Certification active', status=1)
+		Credential.objects.create(nom='Certification cachée', status=0)
+		cours_cache = Cours.objects.create(
+			formateur=self.formateur,
+			titre='Cours non publié secret',
+			description='Contenu interne.',
+			type_contenu='video',
+			status=0,
+		)
+		credential.cours.add(cours_cache)
+		response = self.client.get(reverse('credential_list'))
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'Certification active')
+		self.assertNotContains(response, 'Certification cachée')
+		self.assertNotContains(response, cours_cache.titre)
+
 	def test_community_membership_and_posts_require_membership(self):
 		self.client.force_login(self.user)
 		join_response = self.client.post(reverse('communaute_detail', args=[self.communaute.slug]), {'rejoindre': '1'})
@@ -843,11 +972,44 @@ class PlatformFeaturesTests(TestCase):
 		self.assertEqual(post_response.status_code, 302)
 		self.assertEqual(CommunityPost.objects.get(community=self.communaute, auteur=self.user).contenu, 'Bonjour la communauté !')
 
-	def test_private_community_is_hidden_from_non_members(self):
+	def test_private_community_access_request_hides_posts_until_approval(self):
 		private = Community.objects.create(nom='Groupe privé', description='Accès réservé.', status=1, privee=True)
+		CommunityMembership.objects.create(community=private, user=self.formateur)
+		CommunityPost.objects.create(community=private, auteur=self.formateur, contenu='Échange réservé aux membres.')
 		self.client.force_login(self.user)
-		response = self.client.get(reverse('communaute_detail', args=[private.slug]))
-		self.assertEqual(response.status_code, 404)
+		url = reverse('communaute_detail', args=[private.slug])
+		response = self.client.get(url)
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'Demander l’accès')
+		self.assertNotContains(response, 'Échange réservé aux membres.')
+
+		response = self.client.post(url, {'demander_acces': '1'})
+		self.assertRedirects(response, url)
+		demande = CommunityAccessRequest.objects.get(communaute=private, utilisateur=self.user)
+		self.assertEqual(demande.statut, 'en_attente')
+		self.assertFalse(CommunityMembership.objects.filter(community=private, user=self.user).exists())
+		response = self.client.get(url)
+		self.assertContains(response, 'Demande en attente')
+		self.assertNotContains(response, 'Échange réservé aux membres.')
+
+		administrateur = User.objects.create_superuser(
+			username='community-admin',
+			email='community-admin@example.com',
+			password='Strong!Passphrase2026',
+		)
+		review_community_access_request(demande.pk, statut='approuvee', actor=administrateur)
+		self.assertTrue(CommunityMembership.objects.filter(community=private, user=self.user).exists())
+		self.assertTrue(Notification.objects.filter(destinataire=self.user, type_notification='communaute').exists())
+		response = self.client.get(url)
+		self.assertContains(response, 'Échange réservé aux membres.')
+
+		CommunityMembership.objects.filter(community=private, user=self.user).delete()
+		response = self.client.get(url)
+		self.assertContains(response, 'Redemander l’accès')
+		self.client.post(url, {'demander_acces': '1'})
+		demande.refresh_from_db()
+		self.assertEqual(demande.statut, 'en_attente')
+		self.assertFalse(CommunityMembership.objects.filter(community=private, user=self.user).exists())
 
 	def test_event_registration_is_idempotent_and_respects_capacity(self):
 		self.client.force_login(self.user)
@@ -860,11 +1022,40 @@ class PlatformFeaturesTests(TestCase):
 		self.assertEqual(EventRegistration.objects.filter(evenement=self.evenement, participant=self.user).count(), 1)
 		self.evenement.refresh_from_db()
 		self.assertEqual(self.evenement.places_restantes, 0)
+		self.assertTrue(EventRegistration.objects.get(evenement=self.evenement, participant=self.user).annulee_le is None)
+		self.assertContains(self.client.get(reverse('evenements_pro')), 'Vous êtes inscrit')
+
+		cancel_url = reverse('evenement_annulation', args=[self.evenement.slug])
+		cancelled = self.client.post(cancel_url)
+		self.assertRedirects(cancelled, reverse('evenements_pro'))
+		registration = EventRegistration.objects.get(evenement=self.evenement, participant=self.user)
+		self.assertIsNotNone(registration.annulee_le)
+		self.evenement.refresh_from_db()
+		self.assertEqual(self.evenement.places_restantes, 1)
+
+		rejoined = self.client.post(url)
+		self.assertRedirects(rejoined, reverse('evenements_pro'))
+		registration.refresh_from_db()
+		self.assertIsNone(registration.annulee_le)
+		self.evenement.refresh_from_db()
+		self.assertEqual(self.evenement.places_restantes, 0)
 
 		autre = User.objects.create_user(username='another-learner', password='Strong!Passphrase2026')
 		self.client.force_login(autre)
 		self.client.post(url)
 		self.assertFalse(EventRegistration.objects.filter(evenement=self.evenement, participant=autre).exists())
+
+	def test_event_cancellation_requires_existing_registration_and_post(self):
+		self.client.force_login(self.user)
+		url = reverse('evenement_annulation', args=[self.evenement.slug])
+		self.assertEqual(self.client.get(url).status_code, 405)
+		self.assertEqual(self.client.post(url).status_code, 404)
+
+	def test_profile_form_renders_styled_widgets_from_meta(self):
+		form = UserProfileForm()
+		self.assertIn('textarea', str(form['bio']))
+		self.assertIn('textarea-bordered', str(form['bio']))
+		self.assertIn('file-input-bordered', str(form['photo']))
 
 	def test_new_training_session_starts_with_full_capacity(self):
 		session = TrainingSession.objects.create(
@@ -975,6 +1166,181 @@ class PlatformFeaturesTests(TestCase):
 
 		self.assertEqual(response.status_code, 302)
 		self.assertEqual(ProjectSubmission.objects.get(auteur=self.user).statut, 'a_valider')
+
+	def test_project_invitation_requires_acceptance_before_team_membership(self):
+		ami = User.objects.create_user(
+			username='mariam-equipe',
+			password='Strong!Passphrase2026',
+			first_name='Mariam',
+			last_name='Kone',
+		)
+		Friendship.objects.create(
+			person_one=self.user,
+			person_two=ami,
+			requested_by=self.user,
+			status=Friendship.ACCEPTED,
+		)
+		self.client.force_login(self.user)
+		response = self.client.post(reverse('projet_deposer'), {
+			'titre': 'Outil collaboratif',
+			'description': 'Un outil éducatif conçu en équipe.',
+			'competences': 'Django, UX',
+			'formation': '',
+			'url_demo': '',
+			'url_code': '',
+			'collaborateurs': [str(ami.pk)],
+		})
+
+		self.assertEqual(response.status_code, 302)
+		projet = ProjectSubmission.objects.get(auteur=self.user)
+		invitation = ProjectCollaborator.objects.get(projet=projet, utilisateur=ami)
+		self.assertEqual(projet.statut, 'a_valider')
+		self.assertEqual(invitation.statut, 'en_attente')
+		self.assertFalse(ProjectCollaborator.objects.filter(
+			projet=projet,
+			utilisateur=ami,
+			statut='acceptee',
+		).exists())
+		self.assertTrue(Notification.objects.filter(destinataire=ami, type_notification='projet').exists())
+
+		self.client.force_login(ami)
+		dashboard = self.client.get(reverse('tableau_bord'))
+		self.assertEqual(dashboard.status_code, 200)
+		self.assertIn(invitation, dashboard.context['invitations_projet'])
+		self.assertNotIn(projet, dashboard.context['projets'])
+		galerie = self.client.get(reverse('galerie_projets'))
+		self.assertNotIn(projet, galerie.context['projets'])
+
+		response = self.client.post(reverse('projet_invitation_action', args=[invitation.pk, 'accepter']))
+		self.assertEqual(response.status_code, 302)
+		invitation.refresh_from_db()
+		self.assertEqual(invitation.statut, 'acceptee')
+		self.assertTrue(ProjectCollaborator.objects.filter(
+			projet=projet,
+			utilisateur=ami,
+			statut='acceptee',
+		).exists())
+		self.assertIn(projet, self.client.get(reverse('tableau_bord')).context['projets'])
+
+		projet.statut = 'publie'
+		projet.save(update_fields=['statut'])
+		self.assertContains(self.client.get(reverse('galerie_projets')), 'Mariam Kone')
+
+	def test_project_collaboration_rejects_non_friends_and_private_responses(self):
+		projet = ProjectSubmission.objects.create(
+			auteur=self.user,
+			titre='Projet réservé',
+			description='Projet en cours de validation.',
+		)
+		intrus = User.objects.create_user(username='intrus-projet', password='Strong!Passphrase2026')
+		with self.assertRaises(ValidationError):
+			invite_project_collaborators(projet.pk, [intrus], actor=self.user)
+
+		ami = User.objects.create_user(username='ami-projet', password='Strong!Passphrase2026')
+		Friendship.objects.create(
+			person_one=self.user,
+			person_two=ami,
+			requested_by=self.user,
+			status=Friendship.ACCEPTED,
+		)
+		invite_project_collaborators(projet.pk, [ami], actor=self.user)
+		invitation = ProjectCollaborator.objects.get(projet=projet, utilisateur=ami)
+		with self.assertRaises(PermissionDenied):
+			respond_to_project_invitation(invitation.pk, statut='acceptee', actor=intrus)
+		self.client.force_login(intrus)
+		response = self.client.post(reverse('projet_invitation_action', args=[invitation.pk, 'accepter']))
+		self.assertEqual(response.status_code, 403)
+		invitation.refresh_from_db()
+		self.assertEqual(invitation.statut, 'en_attente')
+
+	def test_accepted_project_collaborator_can_edit_and_must_resubmit_for_review(self):
+		ami = User.objects.create_user(username='coequipier', password='Strong!Passphrase2026')
+		projet = ProjectSubmission.objects.create(
+			auteur=self.user,
+			titre='Projet publié',
+			description='Version initialement validée.',
+			statut='publie',
+		)
+		ProjectCollaborator.objects.create(
+			projet=projet,
+			utilisateur=ami,
+			invite_par=self.user,
+			statut='acceptee',
+			date_decision=timezone.now(),
+		)
+		intrus = User.objects.create_user(username='visiteur-projet', password='Strong!Passphrase2026')
+		self.client.force_login(intrus)
+		self.assertEqual(self.client.get(reverse('projet_modifier', args=[projet.pk])).status_code, 404)
+
+		self.client.force_login(ami)
+		page = self.client.get(reverse('projet_modifier', args=[projet.pk]))
+		self.assertEqual(page.status_code, 200)
+		self.assertNotIn('collaborateurs', page.context['form'].fields)
+		response = self.client.post(reverse('projet_modifier', args=[projet.pk]), {
+			'titre': 'Projet amélioré en équipe',
+			'description': 'Une nouvelle version réalisée ensemble.',
+			'competences': 'Django, conception',
+			'formation': '',
+			'url_demo': '',
+			'url_code': '',
+		})
+		self.assertEqual(response.status_code, 302)
+		projet.refresh_from_db()
+		self.assertEqual(projet.titre, 'Projet amélioré en équipe')
+		self.assertEqual(projet.statut, 'a_valider')
+		self.assertTrue(AuditLog.objects.filter(action='projet.modifie_soumis_validation').exists())
+		self.assertNotIn(projet, self.client.get(reverse('galerie_projets')).context['projets'])
+
+	def test_learning_goals_are_private_editable_and_track_completion(self):
+		self.client.force_login(self.user)
+		date_cible = (timezone.localdate() + timedelta(days=14)).isoformat()
+		response = self.client.post(reverse('objectif_creer'), {
+			'titre': 'Terminer mon cours Python',
+			'description': 'Étudier une leçon chaque semaine.',
+			'date_cible': date_cible,
+		})
+		self.assertEqual(response.status_code, 302)
+		objectif = LearningGoal.objects.get(user=self.user)
+		self.assertContains(self.client.get(reverse('tableau_bord')), objectif.titre)
+
+		other_user = User.objects.create_user(username='autre-apprenant', password='Strong!Passphrase2026')
+		self.client.force_login(other_user)
+		self.assertEqual(self.client.get(reverse('objectif_modifier', args=[objectif.pk])).status_code, 404)
+		self.assertNotContains(self.client.get(reverse('tableau_bord')), objectif.titre)
+
+		self.client.force_login(self.user)
+		response = self.client.post(reverse('objectif_action', args=[objectif.pk, 'atteindre']))
+		self.assertEqual(response.status_code, 302)
+		objectif.refresh_from_db()
+		self.assertEqual(objectif.statut, 'atteint')
+		self.assertIsNotNone(objectif.date_atteinte)
+
+		response = self.client.post(reverse('objectif_modifier', args=[objectif.pk]), {
+			'titre': 'Terminer mon parcours Python',
+			'description': 'Réviser et construire une application.',
+			'date_cible': date_cible,
+		})
+		self.assertEqual(response.status_code, 302)
+		objectif.refresh_from_db()
+		self.assertEqual(objectif.titre, 'Terminer mon parcours Python')
+
+		self.client.post(reverse('objectif_action', args=[objectif.pk, 'reprendre']))
+		objectif.refresh_from_db()
+		self.assertEqual(objectif.statut, 'en_cours')
+		self.assertIsNone(objectif.date_atteinte)
+		self.client.post(reverse('objectif_action', args=[objectif.pk, 'supprimer']))
+		self.assertFalse(LearningGoal.objects.filter(pk=objectif.pk).exists())
+
+	def test_learning_goal_rejects_a_past_target_date(self):
+		self.client.force_login(self.user)
+		response = self.client.post(reverse('objectif_creer'), {
+			'titre': 'Objectif avec date passée',
+			'description': '',
+			'date_cible': (timezone.localdate() - timedelta(days=1)).isoformat(),
+		})
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'La date cible ne peut pas être dans le passé.')
+		self.assertFalse(LearningGoal.objects.filter(user=self.user).exists())
 
 	def test_authentication_and_password_reset_templates_render(self):
 		from django.contrib.auth.tokens import default_token_generator
@@ -1379,7 +1745,7 @@ class WorkflowDataMigrationTests(TransactionTestCase):
 	def setUp(self):
 		super().setUp()
 		self.migrate_from = ('dunia_app', '0026_alter_challenge_prix')
-		self.migrate_to = ('dunia_app', '0027_workflows_audit_and_private_documents')
+		self.migrate_to = ('dunia_app', '0029_demandeaidefinanciere_reference_and_more')
 		self.latest_migrations = MigrationExecutor(connection).loader.graph.leaf_nodes()
 		self._restore_latest_schema = False
 		try:
@@ -1404,6 +1770,7 @@ class WorkflowDataMigrationTests(TransactionTestCase):
 		BusinessProfileModel = apps.get_model('dunia_app', 'BusinessProfile')
 		ChallengeModel = apps.get_model('dunia_app', 'Challenge')
 		ChallengeParticipationModel = apps.get_model('dunia_app', 'ChallengeParticipation')
+		DemandeAideFinanciereModel = apps.get_model('dunia_app', 'DemandeAideFinanciere')
 
 		self.legacy_user = UserModel.objects.create(username='compte-migration')
 		self.legacy_trainer = UserModel.objects.create(username='formateur-migration')
@@ -1417,6 +1784,17 @@ class WorkflowDataMigrationTests(TransactionTestCase):
 			status=1,
 			slug='formation-conservee',
 		)
+		self.legacy_aid_request_ids = []
+		for email in ('legacy-aide-one@example.com', 'legacy-aide-two@example.com'):
+			demande = DemandeAideFinanciereModel.objects.create(
+				formation=formation,
+				nom='Test',
+				prenom='Legacy',
+				email=email,
+				telephone='+22501020304',
+				situation='Demande d’aide historique.',
+			)
+			self.legacy_aid_request_ids.append(demande.pk)
 		session_start = timezone.localdate() + timedelta(days=40)
 		session = TrainingSessionModel.objects.create(
 			formation=formation,
@@ -1485,6 +1863,7 @@ class WorkflowDataMigrationTests(TransactionTestCase):
 		ChallengePaymentAttempt = self.migrated_apps.get_model('dunia_app', 'ChallengePaymentAttempt')
 		ChallengeWorkSubmission = self.migrated_apps.get_model('dunia_app', 'ChallengeWorkSubmission')
 		ChallengeParticipation = self.migrated_apps.get_model('dunia_app', 'ChallengeParticipation')
+		DemandeAideFinanciere = self.migrated_apps.get_model('dunia_app', 'DemandeAideFinanciere')
 
 		self.assertEqual(Cours.objects.get(pk=self.legacy_course.pk).workflow_status, 'publie')
 		self.assertTrue(Candidature.objects.get(pk=self.legacy_candidature.pk).place_retenue)
@@ -1515,6 +1894,12 @@ class WorkflowDataMigrationTests(TransactionTestCase):
 			ChallengeParticipation.objects.get(pk=self.legacy_participation.pk).travail,
 			'https://example.test/ancien-travail',
 		)
+		references_aide = [
+			DemandeAideFinanciere.objects.get(pk=demande_id).reference
+			for demande_id in self.legacy_aid_request_ids
+		]
+		self.assertTrue(all(references_aide))
+		self.assertEqual(len(references_aide), len(set(references_aide)))
 
 
 class UrlRoutingSmokeTests(TestCase):
@@ -1529,7 +1914,11 @@ class UrlRoutingSmokeTests(TestCase):
 
 		for route in named_routes:
 			kwargs = {
-				name: 1 if converter.regex == '[0-9]+' else 'smoke-test'
+					name: (
+						uuid.uuid4()
+						if converter.__class__.__name__ == 'UUIDConverter'
+						else 1 if converter.regex == '[0-9]+' else 'smoke-test'
+					)
 				for name, converter in route.pattern.converters.items()
 			}
 			path = reverse(route.name, kwargs=kwargs)

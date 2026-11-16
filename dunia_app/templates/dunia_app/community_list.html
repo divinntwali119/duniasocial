@@ -8,7 +8,7 @@
   <div class="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
     {% for communaute in communautes %}
     <article class="card border border-base-300 bg-base-100 shadow-sm transition-shadow hover:shadow-md"><div class="card-body gap-2 p-3"><div class="flex items-center justify-between gap-2"><span class="badge badge-primary badge-outline">{{ communaute.member_count }} membres</span>{% if communaute.privee %}<span class="badge badge-ghost">Privée</span>{% endif %}</div><h2 class="card-title mt-1 text-base leading-snug"><a class="link-hover" href="{% url 'communaute_detail' communaute.slug %}">{{ communaute.nom }}</a></h2><p class="text-sm leading-5 text-base-content/70">{{ communaute.description|truncatechars:200 }}</p>{% if communaute.formation %}<p class="text-xs text-base-content/55">Liée à {{ communaute.formation.titre }}</p>{% endif %}<a class="btn btn-outline btn-sm mt-1 w-fit rounded-lg" href="{% url 'communaute_detail' communaute.slug %}">Découvrir</a></div></article>
-    {% empty %}<div class="alert md:col-span-2 xl:col-span-3">Les communautés seront bientôt disponibles.</div>{% endfor %}
+    {% empty %}<div class="alert md:col-span-2 xl:col-span-3">Aucune communauté n’est publiée pour le moment. Revenez bientôt découvrir de nouveaux espaces.</div>{% endfor %}
   </div>
 </main>
 {% endblock %}

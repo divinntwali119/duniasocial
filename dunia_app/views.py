@@ -1,5 +1,11 @@
 import uuid
+from io import BytesIO
 from pathlib import Path
+
+from reportlab.lib.colors import HexColor
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.utils import simpleSplit
+from reportlab.pdfgen import canvas
 
 from django.shortcuts import get_object_or_404, render, redirect
 from django.templatetags.static import static
@@ -29,6 +35,7 @@ from .models import (
     Article,
     Comment,
     Candidature,
+    CommunityAccessRequest,
     DemandeAideFinanciere,
     SessionReservation,
     SocialPost,
@@ -38,6 +45,7 @@ from .models import (
     CommunityMembership,
     CommunityPost,
     Conversation,
+    Credential,
     CourseEvaluation,
     EventRegistration,
     ImpactMetric,
@@ -45,6 +53,8 @@ from .models import (
     JobPosting,
     JobApplication,
     LearnerProjectRequest,
+    LearningGoal,
+    ProjectCollaborator,
     Message,
     FeedComment,
     FeedLike,
@@ -73,6 +83,7 @@ from .forms import (
     CommunityPostForm,
     CourseEvaluationForm,
     ApplicationTrackingForm,
+    FinancialAidTrackingForm,
     JobApplicationForm,
     JobPostingForm,
     LearnerProjectRequestForm,
@@ -89,6 +100,8 @@ from .forms import (
     SessionReservationForm,
     SocialPostForm,
     CourseManagementForm,
+    LearningGoalForm,
+    ProjectCollaboratorInviteForm,
     TrainerApplicationForm,
 )
 from .services import (
@@ -101,6 +114,9 @@ from .services import (
     update_business_profile,
     transition_job_application,
     transition_candidature,
+    review_community_access_request,
+    invite_project_collaborators,
+    respond_to_project_invitation,
 )
 from .throttling import rate_limit
 
@@ -377,22 +393,99 @@ def demande_ami_action(request, friendship_id, action):
 
 @login_required
 def tableau_bord(request):
+    return render(request, 'dunia_app/tableau_bord.html', _tableau_bord_context(request))
+
+
+def _tableau_bord_context(request, *, objectif_form=None):
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    projets = list(
+        ProjectSubmission.objects.filter(
+            Q(auteur=request.user)
+            | Q(collaborations__utilisateur=request.user, collaborations__statut='acceptee')
+        ).distinct().select_related('auteur', 'formation').prefetch_related(
+            'collaborations__utilisateur'
+        ).order_by('-date_creation')[:6]
+    )
+    for projet in projets:
+        if projet.auteur_id == request.user.pk:
+            projet.invite_form = ProjectCollaboratorInviteForm(user=request.user, project=projet)
     context = {
         'profile': profile,
         'formations_suivies': Cours.objects.filter(progressions__user=request.user).distinct().order_by('-date_pub')[:6],
         'candidatures_formation': request.user.candidatures_formation.select_related('formation').order_by('-date_creation')[:5],
         'candidatures_emploi': request.user.candidatures_emploi.select_related('offre__entreprise').order_by('-date_creation')[:5],
         'total_candidatures': request.user.candidatures_formation.count() + request.user.candidatures_emploi.count(),
-        'projets': request.user.projets.order_by('-date_creation')[:6],
+        'projets': projets,
+        'invitations_projet': ProjectCollaborator.objects.filter(
+            utilisateur=request.user,
+            statut='en_attente',
+        ).select_related('projet__auteur').order_by('-date_invitation')[:10],
+        'objectifs': request.user.objectifs_apprentissage.all()[:10],
+        'objectif_form': objectif_form or LearningGoalForm(),
         'certifications': UserCredential.objects.filter(utilisateur=request.user).select_related('certification'),
+        'inscriptions_evenements': EventRegistration.objects.filter(
+            participant=request.user,
+            annulee_le__isnull=True,
+            evenement__status=1,
+            evenement__date_debut__gte=timezone.now(),
+        ).select_related('evenement').order_by('evenement__date_debut')[:5],
         'communautes': request.user.communautes.filter(status=1)[:6],
         'notifications': request.user.notifications_dunia.all()[:5],
         'conversations_count': request.user.conversations_as_one.count() + request.user.conversations_as_two.count(),
         'demandes_role': request.user.demandes_role.all(),
         'profil_formateur': getattr(request.user, 'profil_formateur', None),
     }
-    return render(request, 'dunia_app/tableau_bord.html', context)
+    return context
+
+
+@login_required
+@require_POST
+@rate_limit('learning_goal_create', limit=10, window=3600)
+def learning_goal_create(request):
+    form = LearningGoalForm(request.POST)
+    if form.is_valid():
+        objectif = form.save(commit=False)
+        objectif.user = request.user
+        objectif.save()
+        messages.success(request, 'Votre objectif personnel a été ajouté.')
+        return redirect(f"{reverse('tableau_bord')}#objectifs")
+    return render(request, 'dunia_app/tableau_bord.html', _tableau_bord_context(request, objectif_form=form))
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+@rate_limit('learning_goal_update', limit=20, window=3600)
+def learning_goal_edit(request, goal_id):
+    objectif = get_object_or_404(LearningGoal, pk=goal_id, user=request.user)
+    form = LearningGoalForm(request.POST or None, instance=objectif)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, 'Votre objectif a été mis à jour.')
+        return redirect(f"{reverse('tableau_bord')}#objectifs")
+    return render(request, 'dunia_app/learning_goal_form.html', {
+        'form': form,
+        'objectif': objectif,
+    })
+
+
+@login_required
+@require_POST
+def learning_goal_action(request, goal_id, action):
+    objectif = get_object_or_404(LearningGoal, pk=goal_id, user=request.user)
+    if action == 'supprimer':
+        objectif.delete()
+        messages.success(request, 'Votre objectif a été supprimé.')
+    elif action in {'atteindre', 'reprendre'}:
+        objectif.statut = 'atteint' if action == 'atteindre' else 'en_cours'
+        objectif.date_atteinte = timezone.now() if action == 'atteindre' else None
+        objectif.save(update_fields=['statut', 'date_atteinte', 'date_modification'])
+        messages.success(
+            request,
+            'Objectif marqué comme atteint.' if action == 'atteindre' else 'Objectif remis en cours.',
+        )
+    else:
+        raise Http404
+    return redirect(f"{reverse('tableau_bord')}#objectifs")
 
 
 @login_required
@@ -420,7 +513,14 @@ def cours_terminer(request, slug):
         progression.completed_at = timezone.now()
         progression.save(update_fields=['is_completed', 'completed_at'])
         for credential in cours.certifications_requises.filter(status=1):
-            UserCredential.objects.get_or_create(utilisateur=request.user, certification=credential)
+            cours_requis = credential.cours.count()
+            cours_termines = LearningProgress.objects.filter(
+                user=request.user,
+                is_completed=True,
+                cours__certifications_requises=credential,
+            ).count()
+            if cours_requis and cours_termines == cours_requis:
+                UserCredential.objects.get_or_create(utilisateur=request.user, certification=credential)
         messages.success(request, 'Bravo, ce cours est marqué comme terminé !')
     return redirect('cours_detail', slug=cours.slug)
 
@@ -890,9 +990,42 @@ def aide_financiere_create(request, slug):
         demande = form.save(commit=False)
         demande.formation = formation
         demande.save()
-        messages.success(request, 'Votre demande d’aide financière a bien été transmise à notre équipe.')
-        return redirect('info_detail', slug=formation.slug)
+        return redirect('aide_financiere_confirmation', reference=demande.reference)
     return render(request, 'dunia_app/aide_financiere_form.html', {'formation': formation, 'form': form})
+
+
+def aide_financiere_confirmation(request, reference):
+    demande = get_object_or_404(
+        DemandeAideFinanciere.objects.select_related('formation'),
+        reference=reference,
+    )
+    return render(request, 'dunia_app/aide_financiere_confirmation.html', {'demande': demande})
+
+
+@rate_limit('financial_aid_tracking', limit=10, window=900, include_user=False)
+def aide_financiere_suivi(request):
+    form = FinancialAidTrackingForm(request.POST or None)
+    demande = None
+    action_suivante = ''
+    if request.method == 'POST' and form.is_valid():
+        demande = DemandeAideFinanciere.objects.filter(
+            reference=form.cleaned_data['reference'],
+            email__iexact=form.cleaned_data['email'],
+        ).select_related('formation').first()
+        if demande is None:
+            messages.error(request, 'Aucune demande ne correspond à ces informations.')
+        else:
+            action_suivante = {
+                'recue': 'Votre demande est reçue. L’équipe Dunia l’étudiera et vous contactera par e-mail.',
+                'etude': 'Votre demande est en cours d’étude. Aucune action n’est nécessaire pour le moment.',
+                'recontact': 'L’équipe Dunia souhaite échanger avec vous. Surveillez votre e-mail et votre téléphone.',
+                'cloturee': 'Le traitement de votre demande est terminé. Contactez l’équipe Dunia si vous avez une question.',
+            }.get(demande.statut, '')
+    return render(request, 'dunia_app/aide_financiere_suivi.html', {
+        'form': form,
+        'demande': demande,
+        'action_suivante': action_suivante,
+    })
 
 
 def session_reservation_create(request, session_id):
@@ -1204,7 +1337,14 @@ def business_job_create(request, business_id):
 
 
 def project_gallery(request):
-    projets = ProjectSubmission.objects.filter(statut='publie').select_related('auteur', 'formation')
+    collaborateurs = ProjectCollaborator.objects.filter(statut='acceptee').select_related('utilisateur')
+    projets = ProjectSubmission.objects.filter(statut='publie').select_related(
+        'auteur', 'formation'
+    ).prefetch_related(Prefetch(
+        'collaborations',
+        queryset=collaborateurs,
+        to_attr='collaborateurs_acceptes',
+    ))
     domaine = request.GET.get('domaine', '')
     if domaine:
         projets = projets.filter(formation__domaine=domaine)
@@ -1219,13 +1359,98 @@ def project_gallery(request):
 def project_submit(request):
     form = ProjectSubmissionForm(request.POST or None, request.FILES or None, auteur=request.user)
     if request.method == 'POST' and form.is_valid():
-        project = form.save(commit=False)
-        project.auteur = request.user
-        project.statut = 'a_valider'
-        project.save()
-        messages.success(request, 'Projet envoyé à Dunia pour validation avant publication dans la galerie.')
-        return redirect('tableau_bord')
+        try:
+            with transaction.atomic():
+                project = form.save(commit=False)
+                project.auteur = request.user
+                project.statut = 'a_valider'
+                project.save()
+                invitations = invite_project_collaborators(
+                    project.pk,
+                    form.cleaned_data['collaborateurs'],
+                    actor=request.user,
+                )
+        except DjangoValidationError as error:
+            form.add_error('collaborateurs', error)
+        else:
+            message = 'Projet envoyé à Dunia pour validation avant publication dans la galerie.'
+            if invitations:
+                message += f' Invitations envoyées à {invitations} coéquipier(s).'
+            messages.success(request, message)
+            return redirect('tableau_bord')
     return render(request, 'dunia_app/project_form.html', {'form': form})
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+@rate_limit('project_edit', limit=10, window=3600)
+def project_edit(request, project_id):
+    projet = get_object_or_404(
+        ProjectSubmission.objects.filter(
+            Q(auteur=request.user)
+            | Q(collaborations__utilisateur=request.user, collaborations__statut='acceptee')
+        ).distinct(),
+        pk=project_id,
+    )
+    ancien_statut = projet.statut
+    form = ProjectSubmissionForm(
+        request.POST or None,
+        request.FILES or None,
+        instance=projet,
+        auteur=request.user,
+    )
+    if request.method == 'POST' and form.is_valid():
+        with transaction.atomic():
+            projet = form.save(commit=False)
+            projet.statut = 'a_valider'
+            projet.save()
+            record_audit(request.user, projet, 'projet.modifie_soumis_validation', {
+                'ancien_statut': ancien_statut,
+                'nouveau_statut': projet.statut,
+            })
+        messages.success(request, 'Projet modifié et transmis à Dunia pour validation avant republication.')
+        return redirect(f"{reverse('tableau_bord')}#projets")
+    return render(request, 'dunia_app/project_form.html', {'form': form, 'projet': projet})
+
+
+@login_required
+@require_POST
+@rate_limit('project_collaborator_invite', limit=20, window=3600)
+def project_collaborator_invite(request, project_id):
+    project = get_object_or_404(ProjectSubmission, pk=project_id, auteur=request.user)
+    form = ProjectCollaboratorInviteForm(request.POST, user=request.user, project=project)
+    if not form.is_valid():
+        messages.error(request, 'Sélectionnez un ou plusieurs amis Dunia encore disponibles pour cette équipe.')
+        return redirect(f"{reverse('tableau_bord')}#projets")
+    try:
+        invitations = invite_project_collaborators(
+            project.pk,
+            form.cleaned_data['collaborateurs'],
+            actor=request.user,
+        )
+    except DjangoValidationError as error:
+        messages.error(request, str(error))
+    else:
+        messages.success(request, f'{invitations} invitation(s) envoyée(s).')
+    return redirect(f"{reverse('tableau_bord')}#projets")
+
+
+@login_required
+@require_POST
+def project_invitation_action(request, invitation_id, action):
+    if action not in {'accepter', 'refuser'}:
+        raise Http404
+    statut = 'acceptee' if action == 'accepter' else 'refusee'
+    try:
+        respond_to_project_invitation(invitation_id, statut=statut, actor=request.user)
+    except DjangoValidationError as error:
+        messages.error(request, str(error))
+    else:
+        messages.success(
+            request,
+            'Vous avez rejoint l’équipe du projet.' if statut == 'acceptee' else 'Invitation refusée.',
+        )
+    return redirect(f"{reverse('tableau_bord')}#invitations-projets")
 
 
 def community_list(request):
@@ -1237,12 +1462,41 @@ def community_list(request):
 def community_detail(request, slug):
     community = get_object_or_404(Community.objects.filter(status=1).select_related('formation'), slug=slug)
     membre = CommunityMembership.objects.filter(community=community, user=request.user).exists()
+    demande_acces = None
+    if community.privee and not membre:
+        demande_acces = CommunityAccessRequest.objects.filter(
+            communaute=community,
+            utilisateur=request.user,
+        ).first()
     form = CommunityPostForm()
-    if community.privee and not membre and not request.user.is_staff:
-        raise Http404
     if request.method == 'POST' and 'rejoindre' in request.POST:
+        if community.privee:
+            raise PermissionDenied('Une communauté privée nécessite une demande d’accès approuvée.')
         CommunityMembership.objects.get_or_create(community=community, user=request.user)
         messages.success(request, f"Vous avez rejoint {community.nom}.")
+        return redirect('communaute_detail', slug=community.slug)
+    if request.method == 'POST' and 'demander_acces' in request.POST:
+        if not community.privee or membre:
+            raise Http404
+        demande_acces, creee = CommunityAccessRequest.objects.get_or_create(
+            communaute=community,
+            utilisateur=request.user,
+        )
+        if not creee and demande_acces.statut != 'en_attente':
+            ancien_statut = demande_acces.statut
+            demande_acces.statut = 'en_attente'
+            demande_acces.revue_par = None
+            demande_acces.date_revue = None
+            demande_acces.save(update_fields=['statut', 'revue_par', 'date_revue', 'date_modification'])
+            record_audit(request.user, demande_acces, 'communaute.demande_acces_renouvelee', {
+                'ancien_statut': ancien_statut,
+            })
+            messages.success(request, 'Votre nouvelle demande d’accès a été transmise à l’équipe Dunia.')
+        elif creee:
+            record_audit(request.user, demande_acces, 'communaute.demande_acces', {})
+            messages.success(request, 'Votre demande d’accès a été transmise à l’équipe Dunia.')
+        else:
+            messages.info(request, 'Votre demande d’accès est déjà en cours de traitement.')
         return redirect('communaute_detail', slug=community.slug)
     if request.method == 'POST' and 'contenu' in request.POST:
         if not membre:
@@ -1261,6 +1515,7 @@ def community_detail(request, slug):
     return render(request, 'dunia_app/community_detail.html', {
         'communaute': community,
         'membre': membre,
+        'demande_acces': demande_acces,
         'form': form,
         'publications': community.publications.select_related('auteur')[:50] if membre else [],
     })
@@ -1269,6 +1524,79 @@ def community_detail(request, slug):
 def trainer_list(request):
     formateurs = TrainerProfile.objects.filter(status=1).select_related('user')
     return render(request, 'dunia_app/trainer_list.html', {'formateurs': formateurs})
+
+
+def credential_list(request):
+    certifications = Credential.objects.filter(status=1).prefetch_related(
+        Prefetch('cours', queryset=Cours.objects.filter(status=1)),
+        Prefetch('formations', queryset=Information.objects.filter(status=1)),
+    ).select_related('partenaire')
+    return render(request, 'dunia_app/credential_list.html', {'certifications': certifications})
+
+
+@login_required
+def user_credential_download(request, reference):
+    attribution = get_object_or_404(
+        UserCredential.objects.select_related('utilisateur', 'certification'),
+        reference=reference,
+        utilisateur=request.user,
+    )
+    buffer = BytesIO()
+    page_width, page_height = landscape(A4)
+    document = canvas.Canvas(buffer, pagesize=(page_width, page_height), pageCompression=1)
+    document.setTitle(f"Certificat — {attribution.certification.nom}")
+    document.setAuthor('Dunia')
+    document.setFillColor(HexColor('#f8fafc'))
+    document.rect(0, 0, page_width, page_height, stroke=0, fill=1)
+    document.setStrokeColor(HexColor('#173b70'))
+    document.setLineWidth(4)
+    document.roundRect(24, 24, page_width - 48, page_height - 48, 16, stroke=1, fill=0)
+    document.setStrokeColor(HexColor('#37b7c8'))
+    document.setLineWidth(1)
+    document.roundRect(34, 34, page_width - 68, page_height - 68, 12, stroke=1, fill=0)
+    document.setFillColor(HexColor('#173b70'))
+    document.setFont('Helvetica-Bold', 17)
+    document.drawCentredString(page_width / 2, page_height - 78, 'DUNIA')
+    document.setFillColor(HexColor('#0f172a'))
+    document.setFont('Helvetica-Bold', 27)
+    document.drawCentredString(page_width / 2, page_height - 132, 'CERTIFICAT DE RÉUSSITE')
+    document.setFillColor(HexColor('#475569'))
+    document.setFont('Helvetica', 14)
+    document.drawCentredString(page_width / 2, page_height - 176, 'Ce document atteste que')
+    nom = attribution.utilisateur.get_full_name() or attribution.utilisateur.get_username()
+    document.setFillColor(HexColor('#173b70'))
+    document.setFont('Helvetica-Bold', 23)
+    document.drawCentredString(page_width / 2, page_height - 218, nom)
+    document.setFillColor(HexColor('#475569'))
+    document.setFont('Helvetica', 14)
+    document.drawCentredString(page_width / 2, page_height - 254, 'a obtenu la certification')
+    document.setFillColor(HexColor('#0f172a'))
+    document.setFont('Helvetica-Bold', 19)
+    lignes = simpleSplit(attribution.certification.nom, 'Helvetica-Bold', 19, page_width - 120)
+    y = page_height - 292
+    for ligne in lignes[:2]:
+        document.drawCentredString(page_width / 2, y, ligne)
+        y -= 26
+    document.setFillColor(HexColor('#475569'))
+    document.setFont('Helvetica', 12)
+    document.drawCentredString(page_width / 2, 102, f"Délivré le {timezone.localtime(attribution.date_obtention).strftime('%d/%m/%Y')}")
+    document.drawCentredString(page_width / 2, 78, f"Référence de vérification : {attribution.reference}")
+    document.setFillColor(HexColor('#0e7490'))
+    document.setFont('Helvetica', 9)
+    verification_path = reverse('credential_verify', args=[attribution.reference])
+    document.drawCentredString(page_width / 2, 58, f"Vérification publique : {request.build_absolute_uri(verification_path)}")
+    document.save()
+    buffer.seek(0)
+    filename = f"certificat-dunia-{attribution.reference.hex[:8]}.pdf"
+    return FileResponse(buffer, as_attachment=True, filename=filename, content_type='application/pdf')
+
+
+def credential_verify(request, reference):
+    attribution = get_object_or_404(
+        UserCredential.objects.select_related('certification'),
+        reference=reference,
+    )
+    return render(request, 'dunia_app/credential_verify.html', {'attribution': attribution})
 
 
 @login_required
@@ -1370,6 +1698,14 @@ def learner_directory(request):
 
 def professional_events(request):
     evenements = ProfessionalEvent.objects.filter(status=1, date_debut__gte=timezone.now())
+    if request.user.is_authenticated:
+        evenements = evenements.annotate(inscription_active=Exists(EventRegistration.objects.filter(
+            evenement_id=OuterRef('pk'),
+            participant=request.user,
+            annulee_le__isnull=True,
+        )))
+    else:
+        evenements = evenements.annotate(inscription_active=Value(False, output_field=BooleanField()))
     return render(request, 'dunia_app/professional_events.html', {'evenements': evenements})
 
 
@@ -1383,7 +1719,21 @@ def event_register(request, slug):
             participant=request.user,
         )
         if not creee:
-            messages.info(request, 'Vous êtes déjà inscrit à cet événement.')
+            if inscription.annulee_le is None:
+                messages.info(request, 'Vous êtes déjà inscrit à cet événement.')
+                return redirect('evenements_pro')
+            if evenement.places:
+                places_maj = ProfessionalEvent.objects.filter(
+                    pk=evenement.pk,
+                    places_restantes__gt=0,
+                ).update(places_restantes=F('places_restantes') - 1)
+                if not places_maj:
+                    messages.error(request, 'Cet événement affiche complet.')
+                    return redirect('evenements_pro')
+            inscription.annulee_le = None
+            inscription.status = 1
+            inscription.save(update_fields=['annulee_le', 'status'])
+            messages.success(request, 'Votre inscription à cet événement est réactivée.')
             return redirect('evenements_pro')
         if evenement.places:
             places_maj = ProfessionalEvent.objects.filter(
@@ -1395,6 +1745,34 @@ def event_register(request, slug):
                 messages.error(request, 'Cet événement affiche complet.')
                 return redirect('evenements_pro')
     messages.success(request, 'Votre inscription à cet événement est enregistrée.')
+    return redirect('evenements_pro')
+
+
+@login_required
+@require_POST
+def event_cancel(request, slug):
+    evenement = get_object_or_404(ProfessionalEvent, slug=slug, status=1)
+    with transaction.atomic():
+        inscription = EventRegistration.objects.select_for_update().filter(
+            evenement=evenement,
+            participant=request.user,
+        ).first()
+        if inscription is None:
+            raise Http404
+        if inscription.annulee_le is not None:
+            messages.info(request, 'Votre inscription est déjà annulée.')
+            return redirect('evenements_pro')
+        if evenement.date_debut <= timezone.now():
+            messages.error(request, 'Une inscription ne peut plus être annulée après le début de l’événement.')
+            return redirect('evenements_pro')
+        inscription.annulee_le = timezone.now()
+        inscription.save(update_fields=['annulee_le'])
+        if evenement.places:
+            ProfessionalEvent.objects.filter(
+                pk=evenement.pk,
+                places_restantes__lt=F('places'),
+            ).update(places_restantes=F('places_restantes') + 1)
+    messages.success(request, 'Votre inscription a été annulée et la place libérée.')
     return redirect('evenements_pro')
 
 
